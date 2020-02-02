@@ -2,7 +2,7 @@
 
 Mini C is a project done in Ecole Polytechnique, proposed in the course INF564:
 Compilation. It is a compilator written in Java for a fragment of the language 
-C, containing integers and pointers to structures, which is totally compatible 
+C, containing integers and pointers to structures, and is totally compatible 
 with C. All description can be found on the page (in French): 
 https://www.enseignement.polytechnique.fr/informatique/INF564/projet/sujet-v1.pdf
 

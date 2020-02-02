@@ -10,6 +10,7 @@ int hello(int x) {
 
 int main() {
     int x;
+    int x;
     x = -3;
     return x;
 }

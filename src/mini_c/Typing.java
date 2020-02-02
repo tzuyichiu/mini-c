@@ -16,7 +16,8 @@ public class Typing implements Pvisitor {
     private boolean is_lvalue;
 	private HashMap<String, Pdeclvar> vars;
     private LinkedList<Decl_fun> l_decl_fun = new LinkedList<>();
-    private HashMap<String, Decl_fun> funs = new HashMap();
+    private HashMap<String, Decl_fun> funs = new HashMap<>();
+    private HashMap<String, Structure> structs = new HashMap<>();
     
     // et renvoyé par cette fonction
 	File getFile() {
@@ -273,23 +274,41 @@ public class Typing implements Pvisitor {
 	@Override
 	public void visit(Pstruct n) {
     
+        if (this.structs.containsKey(n.s)) {
+            throw new Error("redefinition of struct: " + n.s);
+        }
+        
         Structure s = new Structure(n.s);
         for (Pdeclvar dv: n.fl) {
+            if (s.fields.containsKey(dv.id)) {
+                throw new Error("redefinition of field " + dv.id + 
+                                " inside struct " + n.s);
+            }
             dv.typ.accept(this);
             s.fields.put(dv.id, new Field(dv.id, this.typ));
         }
-        this.typ = new Tstructp(s);
+        this.structs.put(n.s, s);
 	}
 
 	@Override
 	public void visit(Pfun n) {
-		n.ty.accept(this);
+        
+        n.ty.accept(this);
 		this.return_typ = this.typ;
 		String fun_name = n.s;
-		LinkedList<Decl_var> fun_formals = new LinkedList<>();
+        LinkedList<Decl_var> fun_formals = new LinkedList<>();
+        
+        if (this.funs.containsKey(fun_name)) {
+            throw new Error("redefinition of function: " + fun_name);
+        }
         
         this.vars = new HashMap<>(); // Modified by Tzu-yi on 30 jan (Pcall)
         for (Pdeclvar dv: n.pl) {
+
+            if (this.vars.containsKey(dv.id)) {
+                throw new Error("redefinition of variable " + dv.id + 
+                                " inside function " + fun_name);
+            }
 			dv.typ.accept(this);
             fun_formals.add(new Decl_var(this.typ, dv.id));
             this.vars.put(dv.id, dv); // Modified by Tzu-yi on 30 jan

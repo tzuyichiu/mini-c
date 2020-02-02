@@ -1,0 +1,4 @@
+#!/bin/bash
+D="$( cd "$(dirname "$0")" ; pwd -P )"
+exec java -cp $D/lib/java-cup-11a-runtime.jar:$D/src mini_c.Main $@
+

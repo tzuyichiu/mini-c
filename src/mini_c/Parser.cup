@@ -1,0 +1,218 @@
+import java_cup.runtime.*;
+import java.util.*;
+
+terminal String IDENT;
+terminal Integer INTEGER;
+terminal Binop CMP;
+terminal  INT, STRUCT, IF, ELSE, WHILE, RETURN, SIZEOF,
+	     LP, RP, LBRA,RBRA, COMMA, EQUAL, BARBAR, AMPAMP, EQ, NEQ,
+		  PLUS, MINUS, TIMES, DIV, ARROW, NOT, SEMICOLON;
+terminal UMINUS;
+
+non terminal Pfile file;
+non terminal Pdecl decl, decl_fun;
+non terminal LinkedList<Pdecl> list_decl;
+non terminal LinkedList<Pdeclvar> decl_var, list_decl_var, list_comma_formal;
+non terminal Pdeclvar formal;
+non terminal Pbloc bloc;
+non terminal LinkedList<Pstmt> list_stmt;
+non terminal LinkedList<Pstring> nonempty_list_comma_ident;
+non terminal LinkedList<Pstring> nonempty_list_comma_star_ident;
+non terminal Pstring star_ident;
+non terminal Pstmt stmt;
+non terminal Plvalue lvalue;
+non terminal Pexpr expr;
+non terminal Pstring ident;
+non terminal LinkedList<Pexpr> nonempty_list_comma_expr, list_comma_expr;
+
+precedence right EQUAL;
+precedence left BARBAR;
+precedence left AMPAMP;
+precedence left EQ, NEQ;
+precedence left CMP;
+precedence left PLUS, MINUS;
+precedence left TIMES, DIV;
+precedence nonassoc NOT, UMINUS;
+precedence left ARROW;
+
+precedence nonassoc ELSE;
+
+start with file;
+
+file ::=
+  list_decl:l
+    {: RESULT = new Pfile(l); :}
+;
+
+decl ::=
+  STRUCT IDENT:s LBRA list_decl_var:fl RBRA SEMICOLON
+    {: RESULT = new Pstruct(s, fl); :}
+| decl_fun:d
+    {: RESULT = d; :}
+;
+
+decl_var ::=
+  INT nonempty_list_comma_ident:xl SEMICOLON
+    {: LinkedList<Pdeclvar> l = new LinkedList<Pdeclvar>();
+       for (Pstring x: xl) l.add(new Pdeclvar(Ptype.ptint, x));
+       RESULT = l; :}
+| STRUCT ident:s nonempty_list_comma_star_ident:xl SEMICOLON
+    {: LinkedList<Pdeclvar> l = new LinkedList<Pdeclvar>();
+       Ptype ty = new PTstruct(s);
+       for (Pstring x: xl) l.add(new Pdeclvar(ty, x));
+       RESULT = l; :}
+;
+
+star_ident ::=
+  TIMES ident:x
+   {: RESULT = x; :}
+;
+
+decl_fun ::=
+  INT ident:f LP list_comma_formal:pl RP bloc:b
+    {: RESULT = new Pfun(Ptype.ptint, f, pl, b); :}
+| STRUCT ident:s TIMES ident:f LP list_comma_formal:pl RP bloc:b
+    {: RESULT = new Pfun(new PTstruct(s), f, pl, b); :}
+;
+
+formal ::=
+  INT ident:x
+    {: RESULT = new Pdeclvar(Ptype.ptint, x); :}
+| STRUCT ident:s TIMES ident:x
+    {: RESULT = new Pdeclvar(new PTstruct(s), x); :}
+;
+
+bloc ::=
+  LBRA:loc list_decl_var:vl list_stmt:sl RBRA
+    {: RESULT = new Pbloc(vl, sl, new Loc(locleft, locright)); :}
+;
+
+stmt ::=
+  SEMICOLON:loc
+    {: RESULT =  new Pskip(new Loc(locleft, locright)); :}
+| RETURN:loc expr:e SEMICOLON
+    {: RESULT =  new Preturn(e, new Loc(locleft, locright)); :}
+| IF:loc LP expr:c RP stmt:s1
+    {: Loc locif = new Loc(locleft, locright);
+       RESULT =  new Pif(c, s1, new Pskip(locif), locif); :}
+| IF:loc LP expr:c RP stmt:s1 ELSE stmt:s2
+    {: RESULT =  new Pif(c, s1, s2, new Loc(locleft, locright)); :}
+| expr:e SEMICOLON
+    {: RESULT =  new Peval(e); :}
+| WHILE:loc LP expr:c RP stmt:s1
+    {: RESULT =  new Pwhile(c, s1, new Loc(locleft, locright)); :}
+| bloc:b
+    {: RESULT = b; :}
+;
+
+lvalue ::=
+  ident:id
+    {: RESULT = new Pident(id); :}
+| expr:e1 ARROW IDENT:id
+    {: RESULT = new Parrow(e1, id); :}
+;
+
+expr ::=
+  lvalue:lv
+    {: RESULT = lv; :}
+| INTEGER:c
+    {: RESULT = new Pint(c, new Loc(cleft, cright)); :}
+| MINUS:op expr:e1
+    {: RESULT = new Punop(Unop.Uneg, e1, new Loc(opleft, opright)); :}
+  %prec UMINUS
+| NOT:op expr:e1
+    {: RESULT = new Punop(Unop.Unot, e1, new Loc(opleft, opright)); :}
+| lvalue:e1 EQUAL expr:e2
+    {: RESULT = new Passign(e1, e2); :}
+| expr:e1 EQ expr:e2
+    {: RESULT = new Pbinop(Binop.Beq, e1, e2); :}
+| expr:e1 NEQ expr:e2
+    {: RESULT = new Pbinop(Binop.Bneq, e1, e2); :}
+| expr:e1 PLUS expr:e2
+    {: RESULT = new Pbinop(Binop.Badd, e1, e2); :}
+| expr:e1 MINUS expr:e2
+    {: RESULT = new Pbinop(Binop.Bsub, e1, e2); :}
+| expr:e1 TIMES expr:e2
+    {: RESULT = new Pbinop(Binop.Bmul, e1, e2); :}
+| expr:e1 DIV expr:e2
+    {: RESULT = new Pbinop(Binop.Bdiv, e1, e2); :}
+| expr:e1 CMP:c expr:e2
+    {: RESULT = new Pbinop(c, e1, e2); :}
+| expr:e1 AMPAMP expr:e2
+    {: RESULT = new Pbinop(Binop.Band, e1, e2); :}
+| expr:e1 BARBAR expr:e2
+    {: RESULT = new Pbinop(Binop.Bor, e1, e2); :}
+| ident:f LP list_comma_expr:l RP
+    {: RESULT = new Pcall (f, l); :}
+| LP expr:e RP
+    {: RESULT = e; :}
+| SIZEOF:op LP STRUCT IDENT:id  RP
+    {: RESULT = new Psizeof(id, new Loc(opleft, opright)); :}
+;
+
+list_comma_expr ::=
+  nonempty_list_comma_expr:l
+   {: RESULT = l; :}
+|
+   {: RESULT = new LinkedList<Pexpr>(); :}
+;
+
+nonempty_list_comma_expr ::=
+  expr:x COMMA nonempty_list_comma_expr:l
+   {: l.addFirst(x); RESULT = l; :}
+| expr:x
+   {: LinkedList<Pexpr> l = new LinkedList<Pexpr>();
+      l.add(x); RESULT = l; :}
+;
+
+nonempty_list_comma_ident ::=
+  ident:x COMMA nonempty_list_comma_ident:l
+   {: l.addFirst(x); RESULT = l; :}
+| ident:x
+   {: LinkedList<Pstring> l = new LinkedList<Pstring>();
+      l.add(x); RESULT = l; :}
+;
+
+nonempty_list_comma_star_ident ::=
+  star_ident:x COMMA nonempty_list_comma_star_ident:l
+   {: l.addFirst(x); RESULT = l; :}
+| star_ident:x
+   {: LinkedList<Pstring> l = new LinkedList<Pstring>();
+      l.add(x); RESULT = l; :}
+;
+
+list_comma_formal ::=
+  formal:x
+   {: LinkedList<Pdeclvar> l = new LinkedList<Pdeclvar>();
+   	  l.addFirst(x); RESULT = l; :}
+| formal:x COMMA list_comma_formal:l
+   {: l.addFirst(x); RESULT = l; :}
+|
+   {: RESULT = new LinkedList<Pdeclvar>(); :}
+;
+
+list_decl ::=
+  decl:d list_decl:l
+   {: l.addFirst(d); RESULT = l; :}
+|
+   {: RESULT = new LinkedList<Pdecl>(); :}
+;
+
+list_decl_var ::=
+  decl_var:d list_decl_var:l
+   {: for (Pdeclvar x: d) l.addFirst(x); RESULT = l; :}
+|
+   {: RESULT = new LinkedList<Pdeclvar>(); :}
+;
+
+list_stmt ::=
+  stmt:s list_stmt:l
+   {: l.addFirst(s); RESULT = l; :}
+|
+   {: RESULT = new LinkedList<Pstmt>(); :}
+;
+
+ident ::=
+  IDENT:id
+   {: RESULT = new Pstring(id, new Loc(idleft, idright)); :}
+;

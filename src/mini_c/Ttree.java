@@ -4,7 +4,8 @@ import java.util.HashMap;
 import java.util.LinkedList;
 
 abstract class Typ {
-	abstract void accept(Visitor v);
+    abstract void accept(Visitor v);
+    abstract boolean equals(Typ t);
 }
 
 class Tint extends Typ {
@@ -13,10 +14,19 @@ class Tint extends Typ {
 	void accept(Visitor v) {
 		v.visit(this);
 	}
-	@Override
+    
+    @Override
+    boolean equals(Typ t) {
+        String st = t.toString();
+        boolean p1 = st.equals(this.toString());
+        boolean p2 = st.equals("typenull");
+        return p1 || p2;
+    }
+    
+    @Override
 	public String toString() {
 	    return "int";
-	}
+    }
 }
 
 class Tstructp extends Typ {
@@ -25,6 +35,15 @@ class Tstructp extends Typ {
 	Tstructp(Structure s) {
 		this.s = s;
 	}
+
+    @Override
+    boolean equals(Typ t) {
+        String st = t.toString();
+        boolean p1 = st.equals(this.toString());
+        boolean p2 = st.equals("typenull");
+        boolean p3 = st.equals("void*");
+        return p1 || p2 || p3;
+    }
 
 	void accept(Visitor v) {
 		v.visit(this);
@@ -41,7 +60,16 @@ class Tvoidstar extends Typ {
 
 	void accept(Visitor v) {
 		v.visit(this);
-	}
+    }
+    
+    @Override
+    boolean equals(Typ t) {
+        String st = t.toString();
+        boolean p1 = st.equals(this.toString());
+        boolean p2 = st.startsWith("struct ") && st.endsWith("*");
+        return p1 || p2;
+    }
+
 	@Override
 	public String toString() {
 	  return "void*";
@@ -54,7 +82,17 @@ class Ttypenull extends Typ {
 
 	void accept(Visitor v) {
 		v.visit(this);
-	}
+    }
+    
+    @Override
+    boolean equals(Typ t) {
+        String st = t.toString();
+        boolean p1 = st.equals(this.toString());
+        boolean p2 = st.equals("int");
+        boolean p3 = st.startsWith("struct ") && st.endsWith("*");
+        return p1 || p2 || p3;
+    }
+
 	@Override
 	public String toString() {
 	  return "typenull";

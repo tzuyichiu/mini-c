@@ -20,3 +20,6 @@ necessary, and update some global variables (or shared fields), so that `v` can
 do further examination combining these fields updated by different concerned 
 visitors. If some error occurs, `v` throws an error message, otherwise, it 
 updates the global variables in its turn.
+
+Notice that we added a method **Typ.equals(Typ)** in order to simplify syntax 
+for type verifications.

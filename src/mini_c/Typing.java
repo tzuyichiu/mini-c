@@ -70,7 +70,7 @@ public class Typing implements Pvisitor {
 	public void visit(Punop n) {
         
         n.e1.accept(this);
-        if (n.op == Unop.Uneg && !this.typ.toString().equals("int")) {
+        if (n.op == Unop.Uneg && !this.expr.typ.equals(new Tint())) {
             throw new Error(n.e1.loc.toString() + ": should be int");
         }
         this.expr = new Eunop(n.op, this.expr);
@@ -82,7 +82,7 @@ public class Typing implements Pvisitor {
 
         this.is_lvalue = false;
         n.e1.accept(this);
-        Typ t1 = this.expr.typ;
+        Expr e1 = this.expr;
 
         if (!this.is_lvalue) {
             throw new Error(n.e1.loc.toString() + 
@@ -90,14 +90,14 @@ public class Typing implements Pvisitor {
         }
 
         n.e2.accept(this);
-        Typ t2 = this.expr.typ;
-		if (!t1.toString().equals(t2.toString())) {
+        Expr e2 = this.expr;
+        if (!e1.typ.equals(e2.typ)) {
             throw new Error(n.e1.loc.toString() + ": different types (" +
-                t1.toString() + ", " + t2.toString() + ")");
+                e1.typ.toString() + ", " + e2.typ.toString() + ")");
         }
 
-        this.expr = new Eassign_local(((Pident) n.e1).id, this.expr);
-        this.expr.typ = t1;
+        this.expr = new Eassign_local(((Pident) n.e1).id, e2);
+        this.expr.typ = e1.typ;
 	}
 
 	@Override
@@ -105,26 +105,24 @@ public class Typing implements Pvisitor {
         
         n.e1.accept(this);
         Expr e1 = this.expr;
-        String st1 = e1.typ.toString();
         n.e2.accept(this);
         Expr e2 = this.expr;
-        String st2 = e2.typ.toString();
         
         if (n.op == Binop.Beq || n.op == Binop.Bneq || n.op == Binop.Blt || 
             n.op == Binop.Ble || n.op == Binop.Bgt || n.op == Binop.Bge)
         {    
-            if (!st1.equals(st2)) {
+            if (!e1.typ.equals(e2.typ)) {
                 throw new Error(n.e1.loc.toString() + ": different types (" +
-                    st1 + ", " + st2 + ")");
+                    e1.typ.toString() + ", " + e2.typ.toString() + ")");
             }
         }
         else if (n.op == Binop.Badd || n.op == Binop.Bsub ||
                  n.op == Binop.Bmul || n.op == Binop.Bdiv)
         {
-            if (!st1.equals("int")) {
+            if (!(e1.typ instanceof Tint)) {
                 throw new Error(n.e1.loc.toString() + ": should be int");
             }
-            if (!st2.equals("int")) {
+            if (!(e2.typ instanceof Tint)) {
                 throw new Error(n.e2.loc.toString() + ": should be int");
             }
         }
@@ -138,8 +136,9 @@ public class Typing implements Pvisitor {
 		
         n.e.accept(this);
         Expr e = this.expr;
-        String st1 = e.typ.toString();
-        if (!st1.startsWith("struct ") || !st1.endsWith("*")) {
+        
+        if ((!e.typ.equals(new Tstructp(new Structure("")))) || 
+                !(e.typ instanceof Tstructp)) {
             throw new Error(n.e.loc.toString() + ": should be struct*");
         }
         Structure s = ((Tstructp) e.typ).s;
@@ -193,12 +192,13 @@ public class Typing implements Pvisitor {
         }
         Pdeclvar pd = vars.get(n.id);
         pd.typ.accept(this);
-        String st = this.typ.toString();
-        if (!st.startsWith("struct ") || !st.endsWith("*")) {
+        
+        if ((!this.typ.equals(new Tstructp(new Structure("")))) || 
+                !(this.typ instanceof Tstructp)) {
             throw new Error(n.loc.toString() + ": should be struct*");
         }
 
-        this.expr = new Esizeof(((Tstructp)this.typ).s);
+        this.expr = new Esizeof(((Tstructp) this.typ).s);
         this.expr.typ = new Tint();
 	}
 
@@ -264,9 +264,9 @@ public class Typing implements Pvisitor {
         
         this.stmt = new Sreturn(this.expr);
 
-        if (this.return_typ.toString() != this.typ.toString()) {
+        if (!this.return_typ.equals(this.expr.typ)) {
             throw new Error(n.loc.toString() + ": wrong return type: " +
-                this.typ.toString() + " given, " + 
+                this.expr.typ.toString() + " given, " + 
                 this.return_typ.toString() + " expected");
         }
 	}

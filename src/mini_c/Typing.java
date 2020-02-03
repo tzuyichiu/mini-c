@@ -14,10 +14,27 @@ public class Typing implements Pvisitor {
 	private Stmt stmt;
     private Expr expr;
     private boolean is_lvalue;
-	private HashMap<String, Pdeclvar> vars;
+	private LinkedList<HashMap<String, Pdeclvar>> vars;
     private LinkedList<Decl_fun> l_decl_fun = new LinkedList<>();
     private HashMap<String, Decl_fun> funs = new HashMap<>();
     private HashMap<String, Structure> structs = new HashMap<>();
+    
+    private int isAssigned(String id, Loc loc) {
+        for(int i = this.vars.size()-1; i >= 0; i --) {
+        	if(this.vars.get(i).containsKey(id)) {	
+        		return i;
+        	}
+        }       	
+        throw new Error(loc.toString() + ": unknown variable: " + id);
+    }
+    private int isAssigned(String id) {
+        for(int i = this.vars.size()-1; i >= 0; i --) {
+        	if(this.vars.get(i).containsKey(id)) {	
+        		return i;
+        	}
+        }       	
+        throw new Error("Unknown struct: " + id);
+    }
     
     // et renvoyé par cette fonction
 	File getFile() {
@@ -60,11 +77,12 @@ public class Typing implements Pvisitor {
 
 	@Override
 	public void visit(Pident n) {
+		int index = isAssigned(n.id, n.loc);
+		for(int i = 0; i < this.vars.size(); i++) {
+			System.out.println(this.vars.get(i));
+		}
         
-		if (!vars.containsKey(n.id)) {
-			throw new Error(n.loc.toString() + ": unknown variable: " + n.id);
-        }
-        vars.get(n.id).typ.accept(this);
+        vars.get(index).get(n.id).typ.accept(this);
 
         this.is_lvalue = true;
         this.expr = new Eaccess_local(n.id);
@@ -191,11 +209,10 @@ public class Typing implements Pvisitor {
 
 	@Override
 	public void visit(Psizeof n) {
-        
-        if (!vars.containsKey(n.id)) {
-            throw new Error(n.loc.toString() + ": unknown variable: " + n.id);
-        }
-        Pdeclvar pd = vars.get(n.id);
+		
+		int index = isAssigned(n.id);
+		
+        Pdeclvar pd = vars.get(index).get(n.id);
         pd.typ.accept(this);
         
         if ((!this.typ.equals(new Tstructp(new Structure("")))) || 
@@ -247,14 +264,18 @@ public class Typing implements Pvisitor {
         
         LinkedList<Decl_var> d_vars = new LinkedList<>();
         LinkedList<Stmt> l_stmt = new LinkedList<>();
+        
+        this.vars.addLast(new HashMap<String, Pdeclvar>());
+        
         for (Pdeclvar dv: n.vl) {
+            
+        	if (this.vars.get(this.vars.size()-1).containsKey(dv.id)) {
+        		throw new Error(dv.loc.toString() + ": redefinition of variable: " + dv.id);
+        	}
+        	
+        	dv.typ.accept(this);
+            this.vars.get(this.vars.size()-1).put(dv.id, dv);
 
-            if (this.vars.containsKey(dv.id)) {
-                throw new Error(dv.loc.toString() + 
-                    ": redefinition of variable: " + dv.id);
-            }
-            dv.typ.accept(this);
-            this.vars.put(dv.id, dv);
             d_vars.add(new Decl_var(this.typ, dv.id));
 		}
 		for (Pstmt s: n.sl) {
@@ -262,10 +283,18 @@ public class Typing implements Pvisitor {
             l_stmt.add(this.stmt);
         }
         this.stmt = new Sblock(d_vars, l_stmt);
-
-        for (Pdeclvar dv: n.vl) {
-            this.vars.remove(dv.id);
-        }
+//        System.out.println("Before pop");
+//        for(int i = 0; i < this.vars.size(); i++) {
+//			
+//			System.out.println(this.vars.get(i));
+//			System.out.println("");
+//		}
+        this.vars.removeLast();
+//        System.out.println("After pop");
+//        for(int i = 0; i < this.vars.size(); i++) {
+//			System.out.println(this.vars.get(i));
+//			System.out.println("");
+//		}
 	}
 
 	@Override
@@ -312,18 +341,21 @@ public class Typing implements Pvisitor {
             throw new Error("redefinition of function: " + fun_name);
         }
         
-        this.vars = new HashMap<>(); // Modified by Tzu-yi on 30 jan (Pcall)
+        this.vars = new LinkedList<>();
+        this.vars.addLast(new HashMap<String, Pdeclvar>());
+     
         for (Pdeclvar dv: n.pl) {
-
-            if (this.vars.containsKey(dv.id)) {
+            
+        	if (this.vars.get(this.vars.size()-1).containsKey(dv.id)) {
                 throw new Error("redefinition of variable " + dv.id + 
-                                " inside function " + fun_name);
-            }
-			dv.typ.accept(this);
-            fun_formals.add(new Decl_var(this.typ, dv.id));
-            this.vars.put(dv.id, dv); // Modified by Tzu-yi on 30 jan
-        }
-        
+                        " inside function " + fun_name);
+        	}
+        	
+        	dv.typ.accept(this);
+        	fun_formals.add(new Decl_var(this.typ, dv.id));
+        	this.vars.get(this.vars.size()-1).put(dv.id, dv);
+		}
+                
         n.b.accept(this);
 		Stmt fun_body = this.stmt;
         Decl_fun d_fun = new Decl_fun(this.return_typ, fun_name, 

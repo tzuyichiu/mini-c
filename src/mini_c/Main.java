@@ -31,7 +31,7 @@ public class Main {
         Lexer lexer = new Lexer(reader);
         System.out.println("parsing...");
         MyParser parser = new MyParser(lexer);
-        try {
+        //try {
         	Pfile f = (Pfile) parser.parse().value;
             if (parse_only) System.exit(0);
             System.out.println("typing...");
@@ -39,13 +39,14 @@ public class Main {
             typer.visit(f);
             File tf = typer.getFile();
             if (type_only) System.exit(0);
-        } catch (Error e) {
+        /*} 
+        catch (Error e) {
         	System.out.println("error: " + e.getMessage());
         	System.exit(1);
         } catch (Exception e) {
         	System.out.println("error: " + e.getMessage());
         	System.exit(1);
-        }
+        }*/
 	}
 	
 	static void cat(InputStream st) throws IOException {

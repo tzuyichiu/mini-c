@@ -50,7 +50,12 @@ public class Typing implements Pvisitor {
 	public void visit(Pint n) {
 
         this.expr = new Econst(n.n);
-        this.expr.typ = new Tint();
+        if (n.n != 0) {
+            this.expr.typ = new Tint();
+        }
+        else {
+            this.expr.typ = new Ttypenull();
+        }
 	}
 
 	@Override
@@ -243,6 +248,11 @@ public class Typing implements Pvisitor {
         LinkedList<Decl_var> d_vars = new LinkedList<>();
         LinkedList<Stmt> l_stmt = new LinkedList<>();
         for (Pdeclvar dv: n.vl) {
+
+            if (this.vars.containsKey(dv.id)) {
+                throw new Error(dv.loc.toString() + 
+                    ": redefinition of variable: " + dv.id);
+            }
             dv.typ.accept(this);
             this.vars.put(dv.id, dv);
             d_vars.add(new Decl_var(this.typ, dv.id));

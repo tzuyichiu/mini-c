@@ -8,4 +8,4 @@ all: src/mini_c/*.java
 .PHONY: test
 
 test:
-	$(PGM) test.c
+	$(PGM) --debug --interp-rtl test.c

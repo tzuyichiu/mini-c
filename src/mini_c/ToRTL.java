@@ -3,6 +3,8 @@ package mini_c;
 import java.util.HashMap;
 import java.util.HashSet;
 
+import java.util.Iterator;
+
 class ToRTL implements Visitor {
 	
 	private RTLgraph graph; // graphe en cours de construction
@@ -96,8 +98,10 @@ class ToRTL implements Visitor {
 
 	@Override
 	public void visit(Eaccess_local n) {
-		Register r = var2regs.get(n.i);
-		this.l = this.graph.add(new Rload(r,0,this.r,this.l));
+		Register r1 = var2regs.get(n.i);
+		System.out.println(this.l);
+		this.l = this.graph.add(new Rmbinop(Mbinop.Mmov,r1,this.r,this.l));
+		System.out.println(this.l);
 	}
 
 	@Override
@@ -108,8 +112,11 @@ class ToRTL implements Visitor {
 
 	@Override
 	public void visit(Eassign_local n) {
-		// TODO Auto-generated method stub
-		
+		Register r1 = new Register();
+		Register r2 = var2regs.get(n.i);
+		this.l = this.graph.add(new Rmbinop(Mbinop.Mmov,r1,r2,this.l));
+		this.r = r1;
+		n.e.accept(this);
 	}
 
 	@Override
@@ -120,14 +127,57 @@ class ToRTL implements Visitor {
 
 	@Override
 	public void visit(Eunop n) {
-		// TODO Auto-generated method stub
+		switch(n.u) {
+		case Uneg:
+			/*
+			 * We create a node "L1 : sub r1 r2" with L1 fresh and r1 fresh, and r2 given recursively by the previous visitor
+			 * Then we create another node to put "L2 : mov $0 r2" with L2 fresh
+			 * Finally we recursively process the n.e expression with references to register r1 and label L2 
+			 * (stored in this.r and this.l)
+			 */
+			Register r1 = new Register();
+			Register r2 = this.r;
+			this.l = this.graph.add(new Rmbinop(Mbinop.Msub,r1,r2,this.l)); // After the operation, the returned label is L1 (see above). We store it in this.l.
+			this.l = this.graph.add(new Rconst(0,r2,this.l)); // After the operation, the returned label is L2.		
+			this.r = r1;
+			n.e.accept(this);
+			break;
+		case Unot:		
+			this.l = this.graph.add(new Rmunop(new Msetei(0),this.r,this.l));
+			n.e.accept(this);
+			break;
+		}
 		
 	}
 
 	@Override
 	public void visit(Ebinop n) {
-		// TODO Auto-generated method stub
 		
+		Mbinop mb = null;
+		switch(n.b) {
+			case Beq: mb = Mbinop.Msete; break;
+			case Bneq: mb = Mbinop.Msetne; break;
+			case Blt: mb = Mbinop.Msetl; break;
+			case Ble: mb = Mbinop.Msetle; break;
+			case Bgt: mb = Mbinop.Msetg; break;
+			case Bge: mb = Mbinop.Msetge; break;
+			case Badd: mb = Mbinop.Madd; break;
+			case Bsub: mb = Mbinop.Msub; break;
+			case Bmul: mb = Mbinop.Mmul; break;
+			case Bdiv: mb = Mbinop.Mdiv; break;
+			case Band: break;
+			case Bor: break;
+		}
+		if(n.b != Binop.Band && n.b != Binop.Bor) {
+			Register r1 = new Register();
+			Register r2 = this.r;
+			this.l = this.graph.add(new Rmbinop(mb,r1,r2,this.l));
+			this.r = r1;
+			n.e1.accept(this);
+			this.r = r2;
+			n.e2.accept(this);
+		}
+		//TODO Handle cases Band and Bor
 	}
 
 	@Override
@@ -150,8 +200,6 @@ class ToRTL implements Visitor {
 
 	@Override
 	public void visit(Sexpr n) {
-		this.l = new Label();
-		this.r = new Register();
 		n.e.accept(this);
 	}
 
@@ -172,8 +220,10 @@ class ToRTL implements Visitor {
 		for(Decl_var dv : n.dl) {
 			dv.accept(this);
 		}
-		for(Stmt s : n.sl) {
-			s.accept(this);
+		//Process statements in reverse order
+		Iterator<Stmt> itr = n.sl.descendingIterator();
+		while(itr.hasNext()) {
+			itr.next().accept(this);
 		}
 	}
 

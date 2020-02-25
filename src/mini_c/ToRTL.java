@@ -126,31 +126,29 @@ class ToRTL implements Visitor {
 	@Override
 	public void visit(Eunop n) {
 		switch(n.u) {
-            case Uneg:// TODO Auto-generated method stub
-                /*
-                * We create a node "L1: sub r1 r2" (L1 and r1 fresh), and r2 
-                * given recursively by the previous visitor.
-                * Then we create another node to put "L2: mov $0 r2" (L2 fresh)
-                * Finally we recursively process the n.e expression with 
-                * references to r1 and L2 (stored in this.r and this.l)
-                */
-                Register r1 = new Register();
-                Register r2 = this.r;
-                this.l = this.graph.add(new Rmbinop(Mbinop.Msub, r1, r2, 
-                                                    this.l)); 
-                // the returned label is now L1 (see above). Stored in this.l
-                
-                this.l = this.graph.add(new Rconst(0, r2, this.l)); 
-                // the returned label is now L2
-                this.r = r1;
-                n.e.accept(this);
-                break;
+        case Uneg:
             
-            case Unot:		
-                this.l = this.graph.add(new Rmunop(new Msetei(0), this.r, 
-                                                    this.l));
-                n.e.accept(this);
-                break;
+            // We create a node "L1: sub r1 r2" (L1 and r1 fresh), and r2 
+            // given recursively by the previous visitor.
+            // Then we create another node to put "L2: mov $0 r2" (L2 fresh)
+            // Finally we recursively process the n.e expression with 
+            // references to r1 and L2 (stored in this.r and this.l)
+
+            Register r1 = new Register();
+            Register r2 = this.r;
+            this.l = this.graph.add(new Rmbinop(Mbinop.Msub, r1, r2, this.l)); 
+            // the returned label is now L1 (see above). Stored in this.l
+            
+            this.l = this.graph.add(new Rconst(0, r2, this.l)); 
+            // the returned label is now L2
+            this.r = r1;
+            n.e.accept(this);
+            break;
+        
+        case Unot:		
+            this.l = this.graph.add(new Rmunop(new Msetei(0), this.r, this.l));
+            n.e.accept(this);
+            break;
 		}
 	}
 
@@ -159,18 +157,18 @@ class ToRTL implements Visitor {
 		
 		Mbinop mb = null;
 		switch(n.b) {
-			case Beq : mb = Mbinop.Msete;  break;
-			case Bneq: mb = Mbinop.Msetne; break;
-			case Blt : mb = Mbinop.Msetl;  break;
-			case Ble : mb = Mbinop.Msetle; break;
-			case Bgt : mb = Mbinop.Msetg;  break;
-			case Bge : mb = Mbinop.Msetge; break;
-			case Badd: mb = Mbinop.Madd;   break;
-			case Bsub: mb = Mbinop.Msub;   break;
-			case Bmul: mb = Mbinop.Mmul;   break;
-			case Bdiv: mb = Mbinop.Mdiv;   break;
-			case Band: break;
-			case Bor : break;
+        case Beq : mb = Mbinop.Msete;  break;
+        case Bneq: mb = Mbinop.Msetne; break;
+        case Blt : mb = Mbinop.Msetl;  break;
+        case Ble : mb = Mbinop.Msetle; break;
+        case Bgt : mb = Mbinop.Msetg;  break;
+        case Bge : mb = Mbinop.Msetge; break;
+        case Badd: mb = Mbinop.Madd;   break;
+        case Bsub: mb = Mbinop.Msub;   break;
+        case Bmul: mb = Mbinop.Mmul;   break;
+        case Bdiv: mb = Mbinop.Mdiv;   break;
+        case Band: break;
+        case Bor : break;
 		}
 		if (n.b != Binop.Band && n.b != Binop.Bor) {
 			Register r1 = new Register();
@@ -221,8 +219,24 @@ class ToRTL implements Visitor {
 
 	@Override
 	public void visit(Swhile n) {
-		
-		
+        
+        // Since we execute the statements in the reverse order, this.l is
+        // the label of the statement just after the while loop: stored in quitl
+        Label quitl = this.l;
+
+        // An independent label for goto at the end of the loop
+        Label gotol = new Label();
+        this.l = gotol; // n.s will thus be directed to gotol
+        n.s.accept(this);
+
+        // now this.l contains the label of beginning of the loop
+        Register r1 = new Register();
+        this.r = r1;
+        this.l = this.graph.add(new Rmubranch(new Mjnz(), r1, this.l, quitl));
+
+        n.e.accept(this);
+        this.graph.graph.put(gotol, new Rgoto(this.l));
+        // should "goto" here!! (we evaluate again the Expr)
 	}
 
 	@Override

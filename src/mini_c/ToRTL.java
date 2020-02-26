@@ -2,7 +2,7 @@ package mini_c;
 
 import java.util.HashMap;
 import java.util.HashSet;
-
+import java.util.LinkedList;
 import java.util.Iterator;
 
 class ToRTL implements Visitor {
@@ -12,11 +12,13 @@ class ToRTL implements Visitor {
 	private RTLfile file;
 	private Label l;
 	private Register r;
-	private HashMap<String,Register> var2regs; 
+	private HashMap<String,Register> var2regs;
+	private HashMap<String,Register> arg2regs;
 	
 	ToRTL() {
 		this.graph = new RTLgraph();
 		this.var2regs = new HashMap<>();
+		this.arg2regs = new HashMap<>();
 	}
 	
 	public RTLfile translate(File tree) {
@@ -82,7 +84,7 @@ class ToRTL implements Visitor {
 	public void visit(Decl_var n) {
 		Register r = new Register();
 		this.fun.locals.add(r);
-		this.var2regs.put(n.name,r);
+		this.var2regs.put(n.name, r);
 	}
 
 	@Override
@@ -99,6 +101,9 @@ class ToRTL implements Visitor {
 	@Override
 	public void visit(Eaccess_local n) {
 		Register r1 = this.var2regs.get(n.i);
+		if (r1 == null) {
+			r1 = this.arg2regs.get(n.i);
+		}
 		this.l = this.graph.add(new Rmbinop(Mbinop.Mmov, r1, this.r, this.l));
 	}
 
@@ -194,8 +199,18 @@ class ToRTL implements Visitor {
 
 	@Override
 	public void visit(Ecall n) {
-		// TODO Auto-generated method stub
+		LinkedList<Register> rl = new LinkedList<>();
+		for (Expr args: n.el) {
+			rl.add(new Register());
+		}
 		
+		this.l = this.graph.add(new Rcall(this.r, n.i, rl, this.l));
+
+		Iterator<Register> listIter = rl.listIterator();
+		for (Expr args: n.el) {
+			this.r = listIter.next();
+			args.accept(this);
+		}
 	}
 
 	@Override
@@ -276,6 +291,7 @@ class ToRTL implements Visitor {
 		for (Decl_var dvar: n.fun_formals) {
 			Register r = new Register();
 			this.fun.formals.add(r);
+			this.arg2regs.put(dvar.name, r);
 		}
 		this.fun.result = new Register();
 		this.fun.locals = new HashSet<>();		

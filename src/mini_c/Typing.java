@@ -204,6 +204,7 @@ public class Typing implements Pvisitor {
             }
         }
         this.expr = new Ecall(n.f, l_exprs);
+        this.expr.typ = df.fun_typ;
         this.typ = df.fun_typ;
 	}
 
@@ -325,11 +326,18 @@ public class Typing implements Pvisitor {
         n.ty.accept(this);
 		this.return_typ = this.typ;
 		String fun_name = n.s;
-        LinkedList<Decl_var> fun_formals = new LinkedList<>();
         
         if (this.funs.containsKey(fun_name)) {
             throw new Error("redefinition of function: " + fun_name);
         }
+
+        LinkedList<Decl_var> fun_formals = new LinkedList<>();
+        
+        Decl_fun d_fun = new Decl_fun(this.return_typ, fun_name, 
+                                        fun_formals, null);
+        
+        this.l_decl_fun.add(d_fun);
+        this.funs.put(fun_name, d_fun);
         
         this.vars = new LinkedList<>();
         this.vars.addLast(new HashMap<String, Pdeclvar>());
@@ -347,10 +355,6 @@ public class Typing implements Pvisitor {
 		}
                 
         n.b.accept(this);
-		Stmt fun_body = this.stmt;
-        Decl_fun d_fun = new Decl_fun(this.return_typ, fun_name, 
-                                        fun_formals, fun_body);
-        this.l_decl_fun.add(d_fun);
-        this.funs.put(fun_name, d_fun);
+		d_fun.fun_body = this.stmt;
 	}
 }

@@ -155,22 +155,26 @@ class ToRTL implements Visitor {
 	@Override
 	public void visit(Ebinop n) {
 		
-		Mbinop mb = null;
+        Mbinop mb = null;
+        Mubranch mub = null;
+        int c = -1;
 		switch(n.b) {
-        case Beq : mb = Mbinop.Msete;  break;
-        case Bneq: mb = Mbinop.Msetne; break;
-        case Blt : mb = Mbinop.Msetl;  break;
-        case Ble : mb = Mbinop.Msetle; break;
-        case Bgt : mb = Mbinop.Msetg;  break;
-        case Bge : mb = Mbinop.Msetge; break;
-        case Badd: mb = Mbinop.Madd;   break;
-        case Bsub: mb = Mbinop.Msub;   break;
-        case Bmul: mb = Mbinop.Mmul;   break;
-        case Bdiv: mb = Mbinop.Mdiv;   break;
-        case Band: break;
-        case Bor : break;
+        case Beq : mb = Mbinop.Msete;       break;
+        case Bneq: mb = Mbinop.Msetne;      break;
+        case Blt : mb = Mbinop.Msetl;       break;
+        case Ble : mb = Mbinop.Msetle;      break;
+        case Bgt : mb = Mbinop.Msetg;       break;
+        case Bge : mb = Mbinop.Msetge;      break;
+        case Badd: mb = Mbinop.Madd;        break;
+        case Bsub: mb = Mbinop.Msub;        break;
+        case Bmul: mb = Mbinop.Mmul;        break;
+        case Bdiv: mb = Mbinop.Mdiv;        break;
+        case Band: mub = new Mjz();  c = 0; break;
+        case Bor : mub = new Mjnz(); c = 1; break;
 		}
-		if (n.b != Binop.Band && n.b != Binop.Bor) {
+        
+        // not Band, Bor
+        if (c == -1) {
 			Register r1 = new Register();
 			Register r2 = this.r;
 			this.l = this.graph.add(new Rmbinop(mb, r1, r2, this.l));
@@ -178,8 +182,14 @@ class ToRTL implements Visitor {
 			n.e1.accept(this);
 			this.r = r2;
 			n.e2.accept(this);
-		}
-		// TODO Handle cases Band and Bor
+        }
+        // Band, Bor
+		else {
+            Label lazyl = this.graph.add(new Rconst(c, this.r, this.l));
+            n.e2.accept(this);
+            this.l = this.graph.add(new Rmubranch(mub, this.r, lazyl, this.l));
+            n.e1.accept(this);
+        }
 	}
 
 	@Override

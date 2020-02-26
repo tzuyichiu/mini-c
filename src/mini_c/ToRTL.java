@@ -14,11 +14,13 @@ class ToRTL implements Visitor {
 	private Register r;
 	private HashMap<String,Register> var2regs;
 	private HashMap<String,Register> arg2regs;
+	private int alloc;
 	
 	ToRTL() {
 		this.graph = new RTLgraph();
 		this.var2regs = new HashMap<>();
 		this.arg2regs = new HashMap<>();
+		this.alloc = 0;
 	}
 	
 	public RTLfile translate(File tree) {
@@ -89,8 +91,8 @@ class ToRTL implements Visitor {
 
 	@Override
 	public void visit(Expr n) {
-		// TODO Auto-generated method stub
-		
+		this.l = this.graph.add(new Rconst(this.alloc, this.r, this.l));
+		this.alloc += ((Tstructp) n.typ).s.size;
 	}
 
 	@Override
@@ -109,7 +111,23 @@ class ToRTL implements Visitor {
 
 	@Override
 	public void visit(Eaccess_field n) {
-		// TODO Auto-generated method stub
+		
+		Structure s = ((Tstructp) n.e.typ).s;
+		int i = 0;
+		for (Field f: s.fields.values()) {
+			if (!f.field_name.equals(n.f.field_name)) {
+				if (f.field_typ.equals(new Tint()))
+					i += 4;
+				else
+					i += ((Tstructp) f.field_typ).s.size;
+			}
+			else break;
+		}
+
+		Register r1 = new Register();
+		this.l = this.graph.add(new Rload(r1, i, this.r, this.l));
+		this.r = r1;
+		n.e.accept(this); // TODO
 		
 	}
 
@@ -124,8 +142,26 @@ class ToRTL implements Visitor {
 
 	@Override
 	public void visit(Eassign_field n) {
-		// TODO Auto-generated method stub
 		
+		Structure s = ((Tstructp) n.e1.typ).s;
+		int i = 0;
+		for (Field f: s.fields.values()) {
+			if (!f.field_name.equals(n.f.field_name)) {
+				if (f.field_typ.equals(new Tint()))
+					i += 4;
+				else
+					i += ((Tstructp) f.field_typ).s.size;
+			}
+			else break;
+		}
+
+		Register r1 = new Register();
+		Label l1 = this.graph.add(new Rstore(r1, this.r, i, this.l));
+		this.l = l1;
+		n.e2.accept(this);
+		this.l = l1;
+		this.r = r1;
+		n.e1.accept(this); // TODO
 	}
 
 	@Override
@@ -215,8 +251,19 @@ class ToRTL implements Visitor {
 
 	@Override
 	public void visit(Esizeof n) {
-		// TODO Auto-generated method stub
-		
+		int size = 0;
+		for (Field f: n.s.fields.values()) {
+			if (f.field_typ.equals(new Tint())) {
+				size += 4;
+			}
+			else {
+				Esizeof nf = new Esizeof(((Tstructp) f.field_typ).s);
+				nf.accept(this);
+				size += nf.s.size;
+			}
+		}
+		n.s.size = size;
+		this.l = this.graph.add(new Rconst(size, this.r, this.l));
 	}
 
 	@Override

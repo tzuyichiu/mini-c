@@ -1,7 +1,8 @@
-int fact(int n) {
-  if (n <= 1) return 1;
-  return n * fact(n-1);
-}
+struct S { int a; int b; };
 int main() {
-  return fact(42);
+  struct S *p;
+  p = sbrk(sizeof(struct S));
+  p->a = 40;
+  p->b = 2;
+  return p->a + p->b;
 }

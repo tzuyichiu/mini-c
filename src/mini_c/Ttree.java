@@ -102,7 +102,7 @@ class Ttypenull extends Typ {
 class Structure {
 	public String str_name;
 	public HashMap<String, Field> fields;
-	// on pourra ajouter plus tard ici la taille totale de la structure
+	public int size;	
 
 	Structure(String str_name) {
 		this.str_name = str_name;

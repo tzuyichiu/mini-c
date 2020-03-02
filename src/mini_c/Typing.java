@@ -9,33 +9,15 @@ public class Typing implements Pvisitor {
 
 	// le résultat du typage sera mis dans cette variable
 	private File file;
-    private Typ typ = new Ttypenull();  // Modified by Tzu-yi on 30 jan
+    private Typ typ = new Ttypenull();
     private Typ return_typ; // for statements
 	private Stmt stmt;
     private Expr expr;
-    private boolean is_lvalue;
 	private LinkedList<HashMap<String, Pdeclvar>> vars;
     private LinkedList<Decl_fun> l_decl_fun = new LinkedList<>();
     private HashMap<String, Decl_fun> funs = new HashMap<>();
     private HashMap<String, Decl_fun> fun_prototypes = new HashMap<>();
     private HashMap<String, Structure> structs = new HashMap<>();
-    
-    private int isAssigned(String id, Loc loc) {
-        for(int i = this.vars.size()-1; i >= 0; i--) {
-        	if(this.vars.get(i).containsKey(id)) {	
-        		return i;
-        	}
-        }       	
-        throw new Error(loc.toString() + ": unknown variable: " + id);
-    }
-    private int isAssigned(String id) {
-        for(int i = this.vars.size()-1; i >= 0; i--) {
-        	if(this.vars.get(i).containsKey(id)) {	
-        		return i;
-        	}
-        }
-        throw new Error("Unknown struct: " + id);
-    }
     
 	File getFile() {
 		if (this.file == null)
@@ -46,17 +28,24 @@ public class Typing implements Pvisitor {
 	
 	@Override
 	public void visit(Pfile n) {
-		//Implement manually sbrk and putchar prototypes
-		LinkedList<Decl_var> lsbrk = new LinkedList<>();
+		// Implement prototype functions: sbrk and putchar
+        
+        // sbrk
+        LinkedList<Decl_var> lsbrk = new LinkedList<>();
 		lsbrk.add(new Decl_var(new Tint(), ""));
-		this.fun_prototypes.put("sbrk", new Decl_fun(new Tstructp(new Structure("")), "sbrk", lsbrk, null));
+		this.fun_prototypes.put("sbrk", new Decl_fun(
+            new Tvoidstar(), "sbrk", lsbrk, null));
 		LinkedList<Decl_var> lputchar = new LinkedList<>();
 		lputchar.add(new Decl_var(new Tint(), ""));
-		this.fun_prototypes.put("putchar", new Decl_fun(new Tint(), "putchar", lputchar, null));
-		for (Pdecl d : n.l) {
+        
+        // putchar
+        this.fun_prototypes.put("putchar", 
+            new Decl_fun(new Tint(), "putchar", lputchar, null));
+		for (Pdecl d: n.l) {
 			d.accept(this);
 		}
-		this.file = new File(this.l_decl_fun);
+        
+        this.file = new File(this.l_decl_fun);
 	}
 
 	@Override
@@ -68,7 +57,7 @@ public class Typing implements Pvisitor {
 	@Override
 	public void visit(PTstruct n) {
 
-        this.typ = new Tstructp(new Structure(n.id));
+        this.typ = new Tstructp(this.structs.get(n.id));
 	}
 
 	@Override
@@ -85,14 +74,18 @@ public class Typing implements Pvisitor {
 
 	@Override
 	public void visit(Pident n) {
-		int index = isAssigned(n.id, n.loc);
-		for(int i = 0; i < this.vars.size(); i++) {
-			System.out.println(this.vars.get(i));
-		}
+        int index = -1;
+        for (int i = this.vars.size()-1; i >= 0; i--) {
+        	if (this.vars.get(i).containsKey(n.id)) {	
+                index = i;
+                break;
+        	}
+        }       	
+        if (index < 0)
+            throw new Error(n.loc.toString() + ": unknown variable: " + n.id);
         
         vars.get(index).get(n.id).typ.accept(this);
 
-        this.is_lvalue = true;
         this.expr = new Eaccess_local(n.id);
         this.expr.typ = this.typ;
 	}
@@ -102,7 +95,8 @@ public class Typing implements Pvisitor {
         
         n.e1.accept(this);
         if (n.op == Unop.Uneg && !this.expr.typ.equals(new Tint())) {
-            throw new Error(n.e1.loc.toString() + ": should be int");
+            throw new Error(n.e1.loc.toString() + ": should be int" +
+                this.expr.typ.toString() + " given");
         }
         this.expr = new Eunop(n.op, this.expr);
         this.expr.typ = new Tint();
@@ -111,23 +105,24 @@ public class Typing implements Pvisitor {
 	@Override
 	public void visit(Passign n) {
 
-        this.is_lvalue = false;
         n.e1.accept(this);
         Expr e1 = this.expr;
-
-        if (!this.is_lvalue) {
-            throw new Error(n.e1.loc.toString() + 
-                ": left member not a valid expression");
-        }
 
         n.e2.accept(this);
         Expr e2 = this.expr;
         if (!e1.typ.equals(e2.typ)) {
-            throw new Error(n.e1.loc.toString() + ": different types (" +
+            throw new Error(n.loc.toString() + ": different types (" +
                 e1.typ.toString() + ", " + e2.typ.toString() + ")");
         }
 
-        this.expr = new Eassign_local(((Pident) n.e1).id, e2);
+        if (e1 instanceof Eaccess_local) {
+            Eaccess_local e = (Eaccess_local) e1;
+            this.expr = new Eassign_local(e.i, e2);
+        }
+        if (e1 instanceof Eaccess_field) {
+            Eaccess_field e = (Eaccess_field) e1;
+            this.expr = new Eassign_field(e.e, e.f, e2);
+        }
         this.expr.typ = e1.typ;
 	}
 
@@ -143,7 +138,7 @@ public class Typing implements Pvisitor {
             n.op == Binop.Ble || n.op == Binop.Bgt || n.op == Binop.Bge)
         {    
             if (!e1.typ.equals(e2.typ)) {
-                throw new Error(n.e1.loc.toString() + ": different types (" +
+                throw new Error(n.loc.toString() + ": different types (" +
                     e1.typ.toString() + ", " + e2.typ.toString() + ")");
             }
         }
@@ -151,10 +146,12 @@ public class Typing implements Pvisitor {
                  n.op == Binop.Bmul || n.op == Binop.Bdiv)
         {
             if (!(e1.typ instanceof Tint)) {
-                throw new Error(n.e1.loc.toString() + ": should be int");
+                throw new Error(n.loc.toString() + ": should be int" +
+                    e1.typ.toString() + " given");
             }
             if (!(e2.typ instanceof Tint)) {
-                throw new Error(n.e2.loc.toString() + ": should be int");
+                throw new Error(n.loc.toString() + ": should be int" + 
+                    e2.typ.toString() + " given");
             }
         }
         
@@ -168,20 +165,19 @@ public class Typing implements Pvisitor {
         n.e.accept(this);
         Expr e = this.expr;
         
-        if ((!e.typ.equals(new Tstructp(new Structure("")))) || 
-                !(e.typ instanceof Tstructp)) {
-            throw new Error(n.e.loc.toString() + ": should be struct*");
+        if (!e.typ.equals(new Tvoidstar())) {
+            throw new Error(n.loc.toString() + ": should be struct *; " + 
+                e.typ.toString() + " given");
         }
         Structure s = ((Tstructp) e.typ).s;
         if (!s.fields.containsKey(n.f)) {
-            throw new Error(n.e.loc.toString() + ": " + s.toString() + 
-                " doesn't contain the field " + n.f);
+            throw new Error(n.loc.toString() + ": " + s.toString() + 
+                " doesn't contain field " + n.f);
         }
         Field f = s.fields.get(n.f);
         
         this.expr = new Eaccess_field(e, f);
-        this.expr.typ = f.field_typ;
-        this.is_lvalue = true;
+        this.expr.typ = f.typ;
 	}
 
 	@Override
@@ -219,17 +215,11 @@ public class Typing implements Pvisitor {
 	@Override
 	public void visit(Psizeof n) {
 		
-		int index = isAssigned(n.id);
-		
-        Pdeclvar pd = vars.get(index).get(n.id);
-        pd.typ.accept(this);
-        
-        if ((!this.typ.equals(new Tstructp(new Structure("")))) || 
-                !(this.typ instanceof Tstructp)) {
-            throw new Error(n.loc.toString() + ": should be struct*");
+        if (!this.structs.containsKey(n.id)) {
+            throw new Error(n.loc.toString() + ": " + n.id + " not defined");
         }
-
-        this.expr = new Esizeof(((Tstructp) this.typ).s);
+    
+        this.expr = new Esizeof(this.structs.get(n.id));
         this.expr.typ = new Tint();
 	}
 
@@ -328,6 +318,7 @@ public class Typing implements Pvisitor {
             s.fields.put(dv.id, new Field(dv.id, this.typ, offset));
             offset += 8;
         }
+        s.size = offset;
         this.structs.put(n.s, s);
 	}
 

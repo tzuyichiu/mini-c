@@ -115,15 +115,14 @@ class Structure {
 }
 
 class Field {
-	public String field_name;
-	public Typ field_typ;
-	// on pourra ajouter plus tard ici la position du champ dans la structure
-	public int field_offset;
+	public String name;
+	public Typ typ;
+	public int offset;
 
-	Field(String field_name, Typ field_typ, int field_offset) {
-		this.field_name = field_name;
-		this.field_typ = field_typ;
-		this.field_offset = field_offset;
+	Field(String name, Typ typ, int offset) {
+		this.name = name;
+		this.typ = typ;
+		this.offset = offset;
 	}
 
 	void accept(Visitor v) {

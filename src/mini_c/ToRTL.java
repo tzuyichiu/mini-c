@@ -110,7 +110,7 @@ class ToRTL implements Visitor {
 	public void visit(Eaccess_field n) {
 
 		Register r1 = new Register();
-		this.l = this.graph.add(new Rload(r1, n.f.field_offset, this.r, this.l));
+		this.l = this.graph.add(new Rload(r1, n.f.offset, this.r, this.l));
 		this.r = r1;
 		n.e.accept(this);
 		
@@ -127,17 +127,12 @@ class ToRTL implements Visitor {
 
 	@Override
 	public void visit(Eassign_field n) {
-
-		//TODO Optimize with one register less (use this.r instead of one of r1 or r2)
 		Register r1 = new Register();
-		Register r2 = new Register();
-		Label l1 = this.graph.add(new Rstore(r1,r2,n.f.field_offset,this.l));
+		Label l1 = this.graph.add(new Rstore(r1, this.r, n.f.offset, this.l));
 		this.l = l1;
-		this.r = r1;
 		n.e1.accept(this);
-		this.r = r2;
+		this.r = r1;
 		n.e2.accept(this);
-		
 	}
 
 	@Override
@@ -227,19 +222,8 @@ class ToRTL implements Visitor {
 
 	@Override
 	public void visit(Esizeof n) {
-		int size = 0;
-		for (Field f: n.s.fields.values()) {
-			if (f.field_typ.equals(new Tint())) {
-				size += 4;
-			}
-			else {
-				Esizeof nf = new Esizeof(((Tstructp) f.field_typ).s);
-				nf.accept(this);
-				size += nf.s.size;
-			}
-		}
-		n.s.size = size;
-		this.l = this.graph.add(new Rconst(size, this.r, this.l));
+		
+		this.l = this.graph.add(new Rconst(n.s.size, this.r, this.l));
 	}
 
 	@Override

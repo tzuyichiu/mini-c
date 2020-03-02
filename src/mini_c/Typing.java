@@ -17,10 +17,11 @@ public class Typing implements Pvisitor {
 	private LinkedList<HashMap<String, Pdeclvar>> vars;
     private LinkedList<Decl_fun> l_decl_fun = new LinkedList<>();
     private HashMap<String, Decl_fun> funs = new HashMap<>();
+    private HashMap<String, Decl_fun> fun_prototypes = new HashMap<>();
     private HashMap<String, Structure> structs = new HashMap<>();
     
     private int isAssigned(String id, Loc loc) {
-        for(int i = this.vars.size()-1; i >= 0; i --) {
+        for(int i = this.vars.size()-1; i >= 0; i--) {
         	if(this.vars.get(i).containsKey(id)) {	
         		return i;
         	}
@@ -28,23 +29,30 @@ public class Typing implements Pvisitor {
         throw new Error(loc.toString() + ": unknown variable: " + id);
     }
     private int isAssigned(String id) {
-        for(int i = this.vars.size()-1; i >= 0; i --) {
+        for(int i = this.vars.size()-1; i >= 0; i--) {
         	if(this.vars.get(i).containsKey(id)) {	
         		return i;
         	}
-        }       	
+        }
         throw new Error("Unknown struct: " + id);
     }
     
-    // et renvoyé par cette fonction
 	File getFile() {
 		if (this.file == null)
 			throw new Error("typing not yet done!");
+		
 		return this.file;
 	}
 	
 	@Override
 	public void visit(Pfile n) {
+		//Implement manually sbrk and putchar prototypes
+		LinkedList<Decl_var> lsbrk = new LinkedList<>();
+		lsbrk.add(new Decl_var(new Tint(), ""));
+		this.fun_prototypes.put("sbrk", new Decl_fun(new Tstructp(new Structure("")), "sbrk", lsbrk, null));
+		LinkedList<Decl_var> lputchar = new LinkedList<>();
+		lputchar.add(new Decl_var(new Tint(), ""));
+		this.fun_prototypes.put("putchar", new Decl_fun(new Tint(), "putchar", lputchar, null));
 		for (Pdecl d : n.l) {
 			d.accept(this);
 		}
@@ -178,12 +186,12 @@ public class Typing implements Pvisitor {
 
 	@Override
 	public void visit(Pcall n) {
-        
-        if (!this.funs.containsKey(n.f)) {
+		
+        if (!this.fun_prototypes.containsKey(n.f)) {
             throw new Error(n.loc.toString() + ": function " + 
                 n.f + " not declared");
         }
-        Decl_fun df = this.funs.get(n.f);
+        Decl_fun df = this.fun_prototypes.get(n.f);
         if (n.l.size() != df.fun_formals.size()) {
             throw new Error(n.loc.toString() + 
                 ": wrong number of arguments: " + n.l.size() + " given, " +
@@ -276,8 +284,9 @@ public class Typing implements Pvisitor {
         	}
         	
         	dv.typ.accept(this);
-         this.vars.get(this.vars.size()-1).put(dv.id, dv);
-         d_vars.add(new Decl_var(this.typ, dv.id));
+        	System.out.println(dv.id);
+	        this.vars.get(this.vars.size()-1).put(dv.id, dv);
+	        d_vars.add(new Decl_var(this.typ, dv.id));
 		}
 		for (Pstmt s: n.sl) {
             s.accept(this);
@@ -309,13 +318,15 @@ public class Typing implements Pvisitor {
         }
         
         Structure s = new Structure(n.s);
+        int offset = 0;
         for (Pdeclvar dv: n.fl) {
             if (s.fields.containsKey(dv.id)) {
                 throw new Error("redefinition of field " + dv.id + 
                                 " inside struct " + n.s);
             }
             dv.typ.accept(this);
-            s.fields.put(dv.id, new Field(dv.id, this.typ));
+            s.fields.put(dv.id, new Field(dv.id, this.typ, offset));
+            offset += 8;
         }
         this.structs.put(n.s, s);
 	}
@@ -327,17 +338,16 @@ public class Typing implements Pvisitor {
 		this.return_typ = this.typ;
 		String fun_name = n.s;
         
-        if (this.funs.containsKey(fun_name)) {
+        if (this.fun_prototypes.containsKey(fun_name)) {
             throw new Error("redefinition of function: " + fun_name);
         }
-
-        LinkedList<Decl_var> fun_formals = new LinkedList<>();
         
+        LinkedList<Decl_var> fun_formals = new LinkedList<>();
         Decl_fun d_fun = new Decl_fun(this.return_typ, fun_name, 
-                                        fun_formals, null);
+        		fun_formals, null);
+        fun_prototypes.put(fun_name, d_fun);
         
         this.l_decl_fun.add(d_fun);
-        this.funs.put(fun_name, d_fun);
         
         this.vars = new LinkedList<>();
         this.vars.addLast(new HashMap<String, Pdeclvar>());
@@ -356,5 +366,6 @@ public class Typing implements Pvisitor {
                 
         n.b.accept(this);
 		d_fun.fun_body = this.stmt;
+		this.funs.put(fun_name, d_fun);
 	}
 }

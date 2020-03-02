@@ -14,13 +14,11 @@ class ToRTL implements Visitor {
 	private Register r;
 	private HashMap<String,Register> var2regs;
 	private HashMap<String,Register> arg2regs;
-	private int alloc;
 	
 	ToRTL() {
 		this.graph = new RTLgraph();
 		this.var2regs = new HashMap<>();
 		this.arg2regs = new HashMap<>();
-		this.alloc = 0;
 	}
 	
 	public RTLfile translate(File tree) {
@@ -91,8 +89,7 @@ class ToRTL implements Visitor {
 
 	@Override
 	public void visit(Expr n) {
-		this.l = this.graph.add(new Rconst(this.alloc, this.r, this.l));
-		this.alloc += ((Tstructp) n.typ).s.size;
+		n.accept(this);
 	}
 
 	@Override
@@ -111,23 +108,11 @@ class ToRTL implements Visitor {
 
 	@Override
 	public void visit(Eaccess_field n) {
-		
-		Structure s = ((Tstructp) n.e.typ).s;
-		int i = 0;
-		for (Field f: s.fields.values()) {
-			if (!f.field_name.equals(n.f.field_name)) {
-				if (f.field_typ.equals(new Tint()))
-					i += 4;
-				else
-					i += ((Tstructp) f.field_typ).s.size;
-			}
-			else break;
-		}
 
 		Register r1 = new Register();
-		this.l = this.graph.add(new Rload(r1, i, this.r, this.l));
+		this.l = this.graph.add(new Rload(r1, n.f.field_offset, this.r, this.l));
 		this.r = r1;
-		n.e.accept(this); // TODO
+		n.e.accept(this);
 		
 	}
 
@@ -142,26 +127,17 @@ class ToRTL implements Visitor {
 
 	@Override
 	public void visit(Eassign_field n) {
-		
-		Structure s = ((Tstructp) n.e1.typ).s;
-		int i = 0;
-		for (Field f: s.fields.values()) {
-			if (!f.field_name.equals(n.f.field_name)) {
-				if (f.field_typ.equals(new Tint()))
-					i += 4;
-				else
-					i += ((Tstructp) f.field_typ).s.size;
-			}
-			else break;
-		}
 
+		//TODO Optimize with one register less (use this.r instead of one of r1 or r2)
 		Register r1 = new Register();
-		Label l1 = this.graph.add(new Rstore(r1, this.r, i, this.l));
-		this.l = l1;
-		n.e2.accept(this);
+		Register r2 = new Register();
+		Label l1 = this.graph.add(new Rstore(r1,r2,n.f.field_offset,this.l));
 		this.l = l1;
 		this.r = r1;
-		n.e1.accept(this); // TODO
+		n.e1.accept(this);
+		this.r = r2;
+		n.e2.accept(this);
+		
 	}
 
 	@Override

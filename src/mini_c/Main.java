@@ -39,12 +39,16 @@ public class Main {
     Pfile f = (Pfile) parser.parse().value;
     if (parse_only) System.exit(0);
     Typing typer = new Typing();
-    typer.visit(f);
-    File tf = typer.getFile();
-    if (type_only) System.exit(0);
-    RTLfile rtl = (new ToRTL()).translate(tf);
-    if (debug) rtl.print();
-    if (interp_rtl) { new RTLinterp(rtl); System.exit(0); }
+    try {
+        typer.visit(f);
+        File tf = typer.getFile();
+        if (type_only) System.exit(0);
+        RTLfile rtl = (new ToRTL()).translate(tf);
+        if (debug) rtl.print();
+        if (interp_rtl) { new RTLinterp(rtl); System.exit(0); }
+    } catch (Error e) {
+        System.err.println(e);
+    }
   }
 
 }

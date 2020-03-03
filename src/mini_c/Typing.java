@@ -107,9 +107,9 @@ public class Typing implements Pvisitor {
 
         n.e1.accept(this);
         Expr e1 = this.expr;
-
         n.e2.accept(this);
         Expr e2 = this.expr;
+
         if (!e1.typ.equals(e2.typ)) {
             throw new Error(n.loc.toString() + ": different types (" +
                 e1.typ.toString() + ", " + e2.typ.toString() + ")");
@@ -199,12 +199,13 @@ public class Typing implements Pvisitor {
             n.l.get(i).accept(this);
             Expr e = this.expr;
             l_exprs.add(e);
-            String st1 = e.typ.toString();
-            String st2 = df.fun_formals.get(i).t.toString();
+            Typ t1 = e.typ;
+            Typ t2 = df.fun_formals.get(i).t;
             
-            if (!st2.equals(st1)) {
-                throw new Error(n.loc.toString() + ": type error for argument " 
-                    + i + ": " + st1 + " given, " + st2 + " expected");
+            if (!t1.equals(t2)) {
+                throw new Error(n.loc.toString() + 
+                    ": argument " + (i+1) + ": " + 
+                    t1.toString() + " given, " + t2.toString() + " expected");
             }
         }
         this.expr = new Ecall(n.f, l_exprs);
@@ -274,7 +275,6 @@ public class Typing implements Pvisitor {
         	}
         	
         	dv.typ.accept(this);
-        	System.out.println(dv.id);
 	        this.vars.get(this.vars.size()-1).put(dv.id, dv);
 	        d_vars.add(new Decl_var(this.typ, dv.id));
 		}
@@ -308,6 +308,7 @@ public class Typing implements Pvisitor {
         }
         
         Structure s = new Structure(n.s);
+        this.structs.put(n.s, s);
         int offset = 0;
         for (Pdeclvar dv: n.fl) {
             if (s.fields.containsKey(dv.id)) {
@@ -319,7 +320,6 @@ public class Typing implements Pvisitor {
             offset += 8;
         }
         s.size = offset;
-        this.structs.put(n.s, s);
 	}
 
 	@Override
@@ -327,7 +327,7 @@ public class Typing implements Pvisitor {
         
         n.ty.accept(this);
 		this.return_typ = this.typ;
-		String fun_name = n.s;
+        String fun_name = n.s;
         
         if (this.fun_prototypes.containsKey(fun_name)) {
             throw new Error("redefinition of function: " + fun_name);
@@ -353,7 +353,7 @@ public class Typing implements Pvisitor {
         	dv.typ.accept(this);
         	fun_formals.add(new Decl_var(this.typ, dv.id));
         	this.vars.get(this.vars.size()-1).put(dv.id, dv);
-		}
+        }
                 
         n.b.accept(this);
 		d_fun.fun_body = this.stmt;

@@ -1,8 +1,8 @@
-struct S { int a; int b; };
+
 int main() {
-  struct S *p;
-  p = sbrk(sizeof(struct S));
-  p->a = 40;
-  p->b = 2;
-  return p->a + p->b;
+  putchar(65 + (1 && 1)); // 66, pas 67 !
+  putchar(65 + (1 && 2)); // 66, pas 67 !
+  putchar(65 + (1 && 0));
+  putchar(10);
+  return 0;
 }

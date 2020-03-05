@@ -1,12 +1,7 @@
-/*struct S { int a; };
-
 int main() {
-  struct S *p;
-  p = 0;
-  putchar(p->a);
-  return 0;
-}*/
-int main() {
-  putchar(0 / 1);
+  putchar(65 + (1 && 1)); // 66, pas 67 !
+  putchar(65 + (1 && 2)); // 66, pas 67 !
+  putchar(65 + (1 && 0));
+  putchar(10);
   return 0;
 }

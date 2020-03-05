@@ -1,7 +1,15 @@
+<<<<<<< HEAD
+=======
+/*struct S { int a; };
+
+>>>>>>> 2be89565ae5643ee951a671b1070ed69d34900b8
 int main() {
-  putchar(65 + (1 && 1)); // 66, pas 67 !
-  putchar(65 + (1 && 2)); // 66, pas 67 !
-  putchar(65 + (1 && 0));
-  putchar(10);
+  struct S *p;
+  p = 0;
+  putchar(p->a);
+  return 0;
+}*/
+int main() {
+  putchar(0 / 1);
   return 0;
 }

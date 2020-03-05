@@ -119,7 +119,8 @@ class ToRTL implements Visitor {
 	@Override
 	public void visit(Eassign_local n) {		
 		Register r1 = this.var2regs.get(n.i);
-		if(r1 == null) {
+
+		if (r1 == null) {
 			r1 = this.arg2regs.get(n.i);
 		}
 		this.l = this.graph.add(new Rmbinop(Mbinop.Mmov, this.r, r1, this.l));
@@ -138,7 +139,7 @@ class ToRTL implements Visitor {
 
 	@Override
 	public void visit(Eunop n) {
-		switch(n.u) {
+		switch (n.u) {
         case Uneg:
             
             // We create a node "L1: sub r1 r2" (L1 and r1 fresh), and r2 
@@ -171,8 +172,7 @@ class ToRTL implements Visitor {
         Mbinop mb = null;
         Mubranch mub = null;
         int c = -1;
-        int not_c = -1;	
-		switch(n.b) {
+		switch (n.b) {
         case Beq : mb = Mbinop.Msete;       break;
         case Bneq: mb = Mbinop.Msetne;      break;
         case Blt : mb = Mbinop.Msetl;       break;
@@ -183,8 +183,8 @@ class ToRTL implements Visitor {
         case Bsub: mb = Mbinop.Msub;        break;
         case Bmul: mb = Mbinop.Mmul;        break;
         case Bdiv: mb = Mbinop.Mdiv;        break;
-        case Band: mub = new Mjz();  c = 0; not_c = 1; break;
-        case Bor : mub = new Mjnz(); c = 1; not_c = 0; break;
+        case Band: mub = new Mjz();  c = 0; break;
+        case Bor : mub = new Mjnz(); c = 1; break;
 		}
         
         // not Band, Bor
@@ -203,15 +203,10 @@ class ToRTL implements Visitor {
         }
         // Band, Bor
 		else {
-			/*
-            Label lazyl = this.graph.add(new Rconst(c, this.r, this.l));
-            n.e2.accept(this);
-            this.l = this.graph.add(new Rmubranch(mub, this.r, lazyl, this.l));
-            n.e1.accept(this);
-            */
 			Label l_true = this.graph.add(new Rconst(c, this.r, this.l));
-			Label l_false = this.graph.add(new Rconst(not_c, this.r, this.l));
-			Label if_e1_false = this.graph.add(new Rmubranch(mub, this.r, l_true, l_false));
+			Label l_false = this.graph.add(new Rconst(1-c, this.r, this.l));
+			Label if_e1_false = this.graph.add(
+                new Rmubranch(mub, this.r, l_true, l_false));
 			this.l = if_e1_false;
 			n.e2.accept(this);	
 			this.l = this.graph.add(new Rmubranch(mub, this.r, l_true, this.l));

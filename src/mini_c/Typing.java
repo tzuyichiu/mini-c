@@ -109,10 +109,20 @@ public class Typing implements Pvisitor {
         Expr e1 = this.expr;
         n.e2.accept(this);
         Expr e2 = this.expr;
+        //System.out.println(e1.typ);
+        //System.out.println(e2.typ);
 
         if (!e1.typ.equals(e2.typ)) {
             throw new Error(n.loc.toString() + ": different types (" +
                 e1.typ.toString() + ", " + e2.typ.toString() + ")");
+        }
+        if (e1.typ instanceof Tstructp) {
+        	if(e2.typ instanceof Ttypenull) {
+        		((Tstructp) e1.typ).s.is_null = true;
+        	}
+        	else {
+        		((Tstructp) e1.typ).s.is_null = false;
+        	}
         }
 
         if (e1 instanceof Eaccess_local) {
@@ -145,14 +155,18 @@ public class Typing implements Pvisitor {
         else if (n.op == Binop.Badd || n.op == Binop.Bsub ||
                  n.op == Binop.Bmul || n.op == Binop.Bdiv)
         {
-            if (!(e1.typ instanceof Tint)) {
-                throw new Error(n.loc.toString() + ": should be int" +
+        	//TODO Tidy up the "e1 = " and "e2 = "
+            if (!(e1.typ instanceof Tint || e1.typ instanceof Ttypenull)) {
+                throw new Error("e1 = " + n.loc.toString() + ": should be int. " +
                     e1.typ.toString() + " given");
             }
-            if (!(e2.typ instanceof Tint)) {
-                throw new Error(n.loc.toString() + ": should be int" + 
+            if (!(e2.typ instanceof Tint || e2.typ instanceof Ttypenull)) {
+                throw new Error("e2 = " +n.loc.toString() + ": should be int. " + 
                     e2.typ.toString() + " given");
             }
+        }
+        if(n.op == Binop.Bdiv && e2.typ instanceof Ttypenull) {
+        	throw new Error(n.loc.toString() + ": Division by zero.");
         }
         
         this.expr = new Ebinop(n.op, e1, e2);
@@ -173,6 +187,10 @@ public class Typing implements Pvisitor {
         if (!s.fields.containsKey(n.f)) {
             throw new Error(n.loc.toString() + ": " + s.toString() + 
                 " doesn't contain field " + n.f);
+        }
+        if(s.is_null) {
+        	throw new Error(n.loc.toString() + ": " + s.toString() + 
+                    " null pointer exception");
         }
         Field f = s.fields.get(n.f);
         

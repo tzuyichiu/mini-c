@@ -117,11 +117,12 @@ class ToRTL implements Visitor {
 	}
 
 	@Override
-	public void visit(Eassign_local n) {
-		Register r1 = new Register();
-		Register r2 = this.var2regs.get(n.i);
-		this.l = this.graph.add(new Rmbinop(Mbinop.Mmov, r1, r2, this.l));
-		this.r = r1;
+	public void visit(Eassign_local n) {		
+		Register r1 = this.var2regs.get(n.i);
+		if(r1 == null) {
+			r1 = this.arg2regs.get(n.i);
+		}
+		this.l = this.graph.add(new Rmbinop(Mbinop.Mmov, this.r, r1, this.l));
 		n.e.accept(this);
 	}
 
@@ -170,6 +171,7 @@ class ToRTL implements Visitor {
         Mbinop mb = null;
         Mubranch mub = null;
         int c = -1;
+        int not_c = -1;	
 		switch(n.b) {
         case Beq : mb = Mbinop.Msete;       break;
         case Bneq: mb = Mbinop.Msetne;      break;
@@ -181,26 +183,39 @@ class ToRTL implements Visitor {
         case Bsub: mb = Mbinop.Msub;        break;
         case Bmul: mb = Mbinop.Mmul;        break;
         case Bdiv: mb = Mbinop.Mdiv;        break;
-        case Band: mub = new Mjz();  c = 0; break;
-        case Bor : mub = new Mjnz(); c = 1; break;
+        case Band: mub = new Mjz();  c = 0; not_c = 1; break;
+        case Bor : mub = new Mjnz(); c = 1; not_c = 0; break;
 		}
         
         // not Band, Bor
+		/* 
+		 * |!| Careful here : we want to compute e1 op e2 with r2 <- r2 op r1
+		 * so we have to put e1 in r2 and e2 in r1 
+		 */
         if (c == -1) {
 			Register r1 = new Register();
 			Register r2 = this.r;
 			this.l = this.graph.add(new Rmbinop(mb, r1, r2, this.l));
 			this.r = r1;
-			n.e1.accept(this);
-			this.r = r2;
 			n.e2.accept(this);
+			this.r = r2;
+			n.e1.accept(this);
         }
         // Band, Bor
 		else {
+			/*
             Label lazyl = this.graph.add(new Rconst(c, this.r, this.l));
             n.e2.accept(this);
             this.l = this.graph.add(new Rmubranch(mub, this.r, lazyl, this.l));
             n.e1.accept(this);
+            */
+			Label l_true = this.graph.add(new Rconst(c, this.r, this.l));
+			Label l_false = this.graph.add(new Rconst(not_c, this.r, this.l));
+			Label if_e1_false = this.graph.add(new Rmubranch(mub, this.r, l_true, l_false));
+			this.l = if_e1_false;
+			n.e2.accept(this);	
+			this.l = this.graph.add(new Rmubranch(mub, this.r, l_true, this.l));
+			n.e1.accept(this);
         }
 	}
 
@@ -238,8 +253,10 @@ class ToRTL implements Visitor {
 
 	@Override
 	public void visit(Sif n) {
+		Label prev_l = this.l;
         n.s1.accept(this);
         Label truel = this.l;
+        this.l = prev_l;
         n.s2.accept(this);
         Label falsel = this.l;
     
@@ -314,6 +331,8 @@ class ToRTL implements Visitor {
 		for (Decl_fun f: n.funs) {
 			f.accept(this);
 			this.file.funs.add(this.fun);
+			this.var2regs = new HashMap<>();
+			this.arg2regs = new HashMap<>();
 		}		
 	}
 	

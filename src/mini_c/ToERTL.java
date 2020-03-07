@@ -20,7 +20,8 @@ public class ToERTL implements RTLVisitor {
 	@Override
 	public void visit(Rconst o) {
 		RTL rtl = this.rtlgraph.graph.get(o.l);
-		if (rtl != null) rtl.accept(this);
+        if (rtl != null) rtl.accept(this);
+        else this.l = this.ertlgraph.add(new ERreturn());
 
 		this.l = this.ertlgraph.add(new ERconst(o.i, o.r, this.l));
 	}
@@ -28,7 +29,8 @@ public class ToERTL implements RTLVisitor {
 	@Override
 	public void visit(Rload o) {
 		RTL rtl = this.rtlgraph.graph.get(o.l);
-		if (rtl != null) rtl.accept(this);
+        if (rtl != null) rtl.accept(this);
+        else this.l = this.ertlgraph.add(new ERreturn());
 
 		this.l = this.ertlgraph.add(new ERload(o.r1, o.i, o.r2, this.l));
 	}
@@ -36,7 +38,8 @@ public class ToERTL implements RTLVisitor {
 	@Override
 	public void visit(Rstore o) {
 		RTL rtl = this.rtlgraph.graph.get(o.l);
-		if (rtl != null) rtl.accept(this);
+        if (rtl != null) rtl.accept(this);
+        else this.l = this.ertlgraph.add(new ERreturn());
 
 		this.l = this.ertlgraph.add(new ERstore(o.r1, o.r2, o.i, this.l));
 	}
@@ -44,7 +47,8 @@ public class ToERTL implements RTLVisitor {
 	@Override
 	public void visit(Rmunop o) {
 		RTL rtl = this.rtlgraph.graph.get(o.l);
-		if (rtl != null) rtl.accept(this);
+        if (rtl != null) rtl.accept(this);
+        else this.l = this.ertlgraph.add(new ERreturn());
 
 		this.l = this.ertlgraph.add(new ERmunop(o.m, o.r, this.l));
 	}
@@ -52,7 +56,8 @@ public class ToERTL implements RTLVisitor {
 	@Override
 	public void visit(Rmbinop o) {
 		RTL rtl = this.rtlgraph.graph.get(o.l);
-		if (rtl != null) rtl.accept(this);
+        if (rtl != null) rtl.accept(this);
+        else this.l = this.ertlgraph.add(new ERreturn());
 		
 		if (o.m.equals(Mbinop.Mdiv)) {
 			this.l = this.ertlgraph.add(
@@ -70,34 +75,37 @@ public class ToERTL implements RTLVisitor {
 	@Override
 	public void visit(Rmubranch o) {
 		
-		Label l1 = this.l;
-		Label l2 = new Label();
-		
 		RTL rtl1 = this.rtlgraph.graph.get(o.l1);
-		if (rtl1 != null) rtl1.accept(this);
-		RTL rtl2 = this.rtlgraph.graph.get(o.l2);
-		if (rtl2 != null) {
-			this.l = l2;
-			rtl2.accept(this);
-		}
+        if (rtl1 != null) rtl1.accept(this);
+        else this.l = this.ertlgraph.add(new ERreturn());
+        
+        Label l1 = this.l;
+
+        RTL rtl2 = this.rtlgraph.graph.get(o.l2);
+		if (rtl2 != null) rtl2.accept(this);
+        else this.l = this.ertlgraph.add(new ERreturn());
 		
-		this.l = this.ertlgraph.add(
+        Label l2 = this.l;
+        
+        this.l = this.ertlgraph.add(
 			new ERmubranch(o.m, o.r, l1, l2));
 	}
 
 	@Override
 	public void visit(Rmbbranch o) {
-		Label l1 = this.l;
-		Label l2 = new Label();
 		
 		RTL rtl1 = this.rtlgraph.graph.get(o.l1);
-		if (rtl1 != null) rtl1.accept(this);
-		RTL rtl2 = this.rtlgraph.graph.get(o.l2);
-		if (rtl2 != null) {
-			this.l = l2;
-			rtl2.accept(this);
-		}
-		
+        if (rtl1 != null) rtl1.accept(this);
+        else this.l = this.ertlgraph.add(new ERreturn());
+        
+        Label l1 = this.l;
+
+        RTL rtl2 = this.rtlgraph.graph.get(o.l2);
+		if (rtl2 != null) rtl2.accept(this);
+        else this.l = this.ertlgraph.add(new ERreturn());
+        
+        Label l2 = this.l;
+        
 		this.l = this.ertlgraph.add(
 			new ERmbbranch(o.m, o.r1, o.r2, l1, l2));
 	}
@@ -105,7 +113,8 @@ public class ToERTL implements RTLVisitor {
 	@Override
 	public void visit(Rcall o) {
 		RTL rtl = this.rtlgraph.graph.get(o.l);
-		if (rtl != null) rtl.accept(this);
+        if (rtl != null) rtl.accept(this);
+        else this.l = this.ertlgraph.add(new ERreturn());
 		
 		int n_args = o.rl.size();
 		int k = n_args;
@@ -141,13 +150,13 @@ public class ToERTL implements RTLVisitor {
 	@Override
 	public void visit(Rgoto o) {
 		RTL rtl = this.rtlgraph.graph.get(o.l);
-		if (rtl != null) rtl.accept(this);
+        if (rtl != null) rtl.accept(this);
+        else this.l = this.ertlgraph.add(new ERreturn());
 		this.l = this.ertlgraph.add(new ERgoto(this.l));
 	}
 
 	@Override
 	public void visit(RTLfun o) {
-		this.l = this.ertlgraph.add(new ERreturn());
 		this.rtlgraph = o.body;
 		RTL rtl = this.rtlgraph.graph.get(o.entry);
 		if (rtl != null) rtl.accept(this);

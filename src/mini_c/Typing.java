@@ -109,9 +109,7 @@ public class Typing implements Pvisitor {
         Expr e1 = this.expr;
         n.e2.accept(this);
         Expr e2 = this.expr;
-        //System.out.println(e1.typ);
-        //System.out.println(e2.typ);
-
+        
         if (!e1.typ.equals(e2.typ)) {
             throw new Error(n.loc.toString() + ": different types (" +
                 e1.typ.toString() + ", " + e2.typ.toString() + ")");

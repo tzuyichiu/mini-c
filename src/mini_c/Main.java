@@ -1,7 +1,7 @@
 package mini_c;
 
-import java.io.IOException;
-import java.io.InputStream;
+//import java.io.IOException;
+//import java.io.InputStream;
 
 public class Main {
 
@@ -53,8 +53,8 @@ public class Main {
         if (type_only) System.exit(0);
         RTLfile rtl = (new ToRTL()).translate(tf);
         ERTLfile ertl = (new ToERTL()).translate(rtl);
-        if (debug) rtl.print();
-        if (interp_rtl) { new RTLinterp(rtl); System.exit(0); }
+        if (debug) { rtl.print(); ertl.print(); }
+        if (interp_rtl) { new RTLinterp(rtl); System.exit(0);}
         if (interp_ertl) { new ERTLinterp(ertl); System.exit(0);}
     } catch (Error e) {
         System.err.println(e);

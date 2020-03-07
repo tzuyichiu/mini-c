@@ -27,58 +27,31 @@ class ToRTL implements Visitor {
 	}
 
 	@Override
-	public void visit(Unop n) {
-		// TODO Auto-generated method stub
-		
-	}
+	public void visit(Unop n) {}
 
 	@Override
-	public void visit(Binop n) {
-		// TODO Auto-generated method stub
-		
-	}
+	public void visit(Binop n) {}
 
 	@Override
-	public void visit(String n) {
-		// TODO Auto-generated method stub
-		
-	}
+	public void visit(String n) {}
 
 	@Override
-	public void visit(Tint n) {
-		// TODO Auto-generated method stub
-		
-	}
+	public void visit(Tint n) {}
 
 	@Override
-	public void visit(Tstructp n) {
-		// TODO Auto-generated method stub
-		
-	}
+	public void visit(Tstructp n) {}
 
 	@Override
-	public void visit(Tvoidstar n) {
-		// TODO Auto-generated method stub
-		
-	}
+	public void visit(Tvoidstar n) {}
 
 	@Override
-	public void visit(Ttypenull n) {
-		// TODO Auto-generated method stub
-		
-	}
+	public void visit(Ttypenull n) {}
 
 	@Override
-	public void visit(Structure n) {
-		// TODO Auto-generated method stub
-		
-	}
+	public void visit(Structure n) {}
 
 	@Override
-	public void visit(Field n) {
-		// TODO Auto-generated method stub
-		
-	}
+	public void visit(Field n) {}
 
 	@Override
 	public void visit(Decl_var n) {

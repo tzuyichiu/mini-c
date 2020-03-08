@@ -125,7 +125,7 @@ public class ToERTL implements RTLVisitor {
 		visited_labels.add(o.l2);
 		Label l2 = o.l2;
         if (rtl2 != null) rtl2.accept(this);
-        else l2 = this.ertlgraph.add(new ERreturn());
+        //else l2 = this.ertlgraph.add(new ERreturn());
         
 		this.ertlgraph.put(myLabel,
 			new ERmbbranch(o.m, o.r1, o.r2, o.l1, l2));
@@ -236,9 +236,9 @@ public class ToERTL implements RTLVisitor {
         this.last_fresh = o.entry;
         
         // 4. Copy the other parameters into pseudo-registers
-		for (int i=n_args-1; i>=6; i--) {
+		for (int i=6; i <= n_args-1; i++) {
 			this.last_fresh = this.ertlgraph.add(
-                new ERget_param(i-6, o.formals.get(i), this.last_fresh));
+                new ERget_param(8*(n_args+1-i), o.formals.get(i), this.last_fresh));
 		}
 		
 		// 3. Pass the min(n, 6) parameters into pseudo-register

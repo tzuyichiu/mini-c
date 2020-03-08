@@ -1,7 +1,9 @@
-int fact(int n) {
-  if (n <= 1) return 1;
-  return n * fact(n-1);
-}
+
 int main() {
-  return fact(42);
+  int x;
+  // il est autorisé de ne pas initialiser une variable
+  if (x == x)
+    putchar('a');
+  putchar(10);
+  return 0;
 }

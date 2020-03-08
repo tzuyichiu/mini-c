@@ -90,9 +90,9 @@ class ToRTL implements Visitor {
 	}
 
 	@Override
-	public void visit(Eassign_local n) {		
+	public void visit(Eassign_local n) {
 		Register r1 = this.var2regs.get(n.i);
-
+		
 		if (r1 == null) {
 			r1 = this.arg2regs.get(n.i);
 		}
@@ -261,7 +261,6 @@ class ToRTL implements Visitor {
 		for (Decl_var dv: n.dl) {
 			dv.accept(this);
 		}
-        
         // Process statements in reverse order
 		Iterator<Stmt> itr = n.sl.descendingIterator();
 		while (itr.hasNext()) {

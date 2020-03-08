@@ -51,11 +51,24 @@ public class Main {
         typer.visit(f);
         File tf = typer.getFile();
         if (type_only) System.exit(0);
-        RTLfile rtl = (new ToRTL()).translate(tf);
-        ERTLfile ertl = (new ToERTL()).translate(rtl);
-        if (debug) { rtl.print(); ertl.print(); }
-        if (interp_rtl) { new RTLinterp(rtl); System.exit(0);}
-        if (interp_ertl) { new ERTLinterp(ertl); System.exit(0);}
+        if (interp_rtl) {
+        	RTLfile rtl = (new ToRTL()).translate(tf);
+        	if (debug) {
+        		rtl.print();
+        	}
+        	new RTLinterp(rtl);
+        	System.exit(0);
+        }
+        if (interp_ertl) {
+        	RTLfile rtl = (new ToRTL()).translate(tf);
+        	ERTLfile ertl = (new ToERTL()).translate(rtl);
+        	if (debug) {
+        		rtl.print();
+        		ertl.print();
+        	}
+        	new ERTLinterp(ertl);
+        	System.exit(0);
+        }
     } catch (Error e) {
         System.err.println(e);
     }

@@ -1,5 +1,6 @@
 package mini_c;
 
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
@@ -14,7 +15,7 @@ public class Interference{
 	Map<Register, Arcs> graph;
 	
 	void addPref(Register r1, Register r2) {
-		if (this.graph.containsKey(r1) && !this.graph.get(r1).prefs.contains(r2)) {
+		if (this.graph.containsKey(r1)) {
 			this.graph.get(r1).prefs.add(r2);
 		}
 		else {
@@ -22,7 +23,7 @@ public class Interference{
 			arcs.prefs.add(r2);
 			this.graph.put(r1, arcs);
 		}
-		if (this.graph.containsKey(r2) && !this.graph.get(r2).prefs.contains(r1)) {
+		if (this.graph.containsKey(r2)) {
 			this.graph.get(r2).prefs.add(r1);
 		}
 		else {
@@ -33,7 +34,7 @@ public class Interference{
 	}
 	
 	void addIntf(Register r1, Register r2) {
-		if (this.graph.containsKey(r1) && !this.graph.get(r1).intfs.contains(r2)) {
+		if (this.graph.containsKey(r1)) {
 			this.graph.get(r1).intfs.add(r2);
 		}
 		else {
@@ -41,7 +42,7 @@ public class Interference{
 			arcs.intfs.add(r2);
 			this.graph.put(r1, arcs);
 		}
-		if (this.graph.containsKey(r2) && !this.graph.get(r2).intfs.contains(r1)) {
+		if (this.graph.containsKey(r2)) {
 			this.graph.get(r2).intfs.add(r1);
 		}
 		else {
@@ -52,6 +53,7 @@ public class Interference{
 	}
 	
 	Interference(Liveness lg){
+		this.graph = new HashMap<>();
 		for(Map.Entry<Label, LiveInfo> entry : lg.info.entrySet()) {
 			if (entry.getValue().instr instanceof ERmbinop && 
 					((ERmbinop) entry.getValue().instr).m.equals(Mbinop.Mmov) && 
@@ -60,10 +62,13 @@ public class Interference{
 				Register w = ((ERmbinop) entry.getValue().instr).r1;
 				Register v = ((ERmbinop) entry.getValue().instr).r2;
 				this.addPref(w,v);
+				
+				
 				Iterator<Register> itr = entry.getValue().outs.iterator();
 				while (itr.hasNext()) {
-					if (!itr.next().equals(w)) {
-						this.addIntf(v,itr.next());
+					Register r = itr.next();
+					if (!r.equals(w) && !r.equals(v)) {
+						this.addIntf(v,r);
 					}
 				}
 			}
@@ -71,9 +76,13 @@ public class Interference{
 				//Not in case mov w v, add all interference edge
 				Iterator<Register> itrDefs = entry.getValue().defs.iterator();
 				while (itrDefs.hasNext()) {
+					Register rDef = itrDefs.next();
 					Iterator<Register> itrOuts = entry.getValue().outs.iterator();
 					while (itrOuts.hasNext()) {
-						this.addIntf(itrDefs.next(),itrOuts.next());
+						Register rOut = itrOuts.next();
+						if (!rDef.equals(rOut)) {							
+							this.addIntf(rDef,rOut);
+						}
 					}
 				}
 			}

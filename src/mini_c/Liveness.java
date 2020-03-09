@@ -35,7 +35,10 @@ class Liveness {
             Label l = ws.iterator().next();
             ws.remove(l);
             LiveInfo li = this.info.get(l);
-            Set<Register> old_in = li.ins;
+            Set<Register> old_in = new HashSet<>();
+            for (Register r: li.ins) {
+                old_in.add(r);
+            }
             
             // update outs
             for (Label s: li.succ) {

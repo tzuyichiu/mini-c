@@ -8,6 +8,9 @@ all: src/mini_c/*.java
 
 .PHONY: test
 
+test-typing:
+	$(PGM) $(f)
+
 test-rtl:
 	$(PGM) --debug --interp-rtl $(f)
 

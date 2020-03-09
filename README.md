@@ -12,9 +12,18 @@ https://www.enseignement.polytechnique.fr/informatique/INF564/projet/sujet-v1.pd
 
 Once inside the root directory, execute `make` to *compile (!)* this compiler. 
 
-`make test` executes **Main.java** with the default file **test.c**.
+Three `make` methods were defined in order to test our compiler by executing 
+`Main.java`:
 
-Besides, this project is provided with a directory **tests** including 
+- `make test-typing`: without any interpretation, used to test typing errors.
+- `make test-rtl`: generates the corresponding `RTLGraph`.
+- `make test-ertl`: generates the corresponding `ERTLGraph`.
+
+The default testing file is by default `test.c`, however one can specify a 
+testing file by passing it to the argument `f`:
+`make test-choice f=path/to/your/testing/file`
+
+Besides, this project is provided with a directory `tests` including 
 available testing files. The following commands allow to launch the testing
 procedure:
 ```bash
@@ -26,7 +35,7 @@ cd tests
 
 ### Overview
 
-The file **Typing.java** contains the so-called **visitors** examining 
+The file `Typing.java` contains the so-called `visitors` examining 
 recursively the correctness of every possible typing error for expressions, 
 statements, declarations and files. Refer to the detailed page for the 
 inference rules based on which we decided to throw an error on typing.
@@ -45,7 +54,7 @@ do further examination combining these fields updated by different concerned
 visitors. If some error occurs, `v` throws an error message, otherwise, it 
 updates the global variables in its turn.
 
-Notice that we added a method **Typ.equals(Typ)** in order to simplify syntax 
+Notice that we added a method `Typ.equals(Typ)` in order to simplify syntax 
 for type verifications.
 
 By the way, we also encountered some difficulties while working with variables

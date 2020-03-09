@@ -251,7 +251,11 @@ class ERTLfun {
     System.out.println(name + "(" + formals + ")");
     System.out.println("  entry  : " + entry);
     System.out.println("  locals : " + locals);
-    body.print(entry);
+    //body.print(entry);
+    Liveness ln = new Liveness(body);
+    ln.print(entry);
+    new Interference(ln).print();
+    
   }
 }
 

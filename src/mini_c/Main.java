@@ -1,8 +1,5 @@
 package mini_c;
 
-//import java.io.IOException;
-//import java.io.InputStream;
-
 public class Main {
 
   static boolean parse_only = false;

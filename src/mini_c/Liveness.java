@@ -93,13 +93,13 @@ class LiveInfo {
     public String toString() {
         String res = String.format("%-19s", this.instr);
         res += "  defs = ";
-        res += String.format("%-18s", Arrays.toString(this.ins.toArray()));
+        res += String.format("%-12s", Arrays.toString(this.defs.toArray()));
         res += "  uses = ";
-        res += String.format("%-18s", Arrays.toString(this.ins.toArray()));
+        res += String.format("%-18s", Arrays.toString(this.uses.toArray()));
         res += "  in = ";
         res += String.format("%-18s", Arrays.toString(this.ins.toArray()));
         res += "  out = ";
-        res += String.format("%-18s", Arrays.toString(this.ins.toArray()));
+        res += String.format("%-18s", Arrays.toString(this.outs.toArray()));
         return res;
     }
 }

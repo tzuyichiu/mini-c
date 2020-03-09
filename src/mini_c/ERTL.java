@@ -254,8 +254,9 @@ class ERTLfun {
     //body.print(entry);
     Liveness ln = new Liveness(body);
     ln.print(entry);
-    new Interference(ln).print();
-    
+    Interference ig = new Interference(ln);
+    ig.print();
+    (new Coloring (ig)).print();
   }
 }
 

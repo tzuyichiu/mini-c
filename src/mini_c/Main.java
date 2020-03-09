@@ -44,30 +44,26 @@ public class Main {
     Pfile f = (Pfile) parser.parse().value;
     if (parse_only) System.exit(0);
     Typing typer = new Typing();
-    try {
-        typer.visit(f);
-        File tf = typer.getFile();
-        if (type_only) System.exit(0);
-        if (interp_rtl) {
-        	RTLfile rtl = (new ToRTL()).translate(tf);
-        	if (debug) {
-        		rtl.print();
-        	}
-        	new RTLinterp(rtl);
-        	System.exit(0);
-        }
-        if (interp_ertl) {
-        	RTLfile rtl = (new ToRTL()).translate(tf);
-        	ERTLfile ertl = (new ToERTL()).translate(rtl);
-        	if (debug) {
-        		rtl.print();
-        		ertl.print();
-        	}
-        	new ERTLinterp(ertl);
-        	System.exit(0);
-        }
-    } catch (Error e) {
-        System.err.println(e);
+    typer.visit(f);
+    File tf = typer.getFile();
+    if (type_only) System.exit(0);
+    if (interp_rtl) {
+    	RTLfile rtl = (new ToRTL()).translate(tf);
+    	if (debug) {
+    		rtl.print();
+    	}
+    	new RTLinterp(rtl);
+    	System.exit(0);
+    }
+    if (interp_ertl) {
+    	RTLfile rtl = (new ToRTL()).translate(tf);
+    	ERTLfile ertl = (new ToERTL()).translate(rtl);
+    	if (debug) {
+    		rtl.print();
+    		ertl.print();
+    	}
+    	new ERTLinterp(ertl);
+    	System.exit(0);
     }
   }
 

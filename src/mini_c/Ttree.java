@@ -103,7 +103,6 @@ class Structure {
 	public String str_name;
 	public HashMap<String, Field> fields;
 	public int size;
-	public boolean is_null;
 
 	Structure(String str_name) {
 		this.str_name = str_name;

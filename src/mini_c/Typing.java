@@ -20,9 +20,6 @@ public class Typing implements Pvisitor {
     private HashMap<String, Structure> structs = new HashMap<>();
     
 	File getFile() {
-		if (this.file == null)
-			throw new Error("typing not yet done!");
-		
 		return this.file;
 	}
 	
@@ -95,8 +92,8 @@ public class Typing implements Pvisitor {
         
         n.e1.accept(this);
         if (n.op == Unop.Uneg && !this.expr.typ.equals(new Tint())) {
-            throw new Error(n.e1.loc.toString() + ": should be int" +
-                this.expr.typ.toString() + " given");
+            throw new Error(n.loc.toString() + ": unsupported operation: " + 
+                "!" + this.expr.typ.toString());
         }
         this.expr = new Eunop(n.op, this.expr);
         this.expr.typ = new Tint();
@@ -111,16 +108,8 @@ public class Typing implements Pvisitor {
         Expr e2 = this.expr;
         
         if (!e1.typ.equals(e2.typ)) {
-            throw new Error(n.loc.toString() + ": different types (" +
-                e1.typ.toString() + ", " + e2.typ.toString() + ")");
-        }
-        if (e1.typ instanceof Tstructp) {
-        	if(e2.typ instanceof Ttypenull) {
-        		((Tstructp) e1.typ).s.is_null = true;
-        	}
-        	else {
-        		((Tstructp) e1.typ).s.is_null = false;
-        	}
+            throw new Error(n.loc.toString() + ": unsupported operation: " + 
+                e1.typ.toString() + " = " + e2.typ.toString());
         }
 
         if (e1 instanceof Eaccess_local) {
@@ -142,33 +131,33 @@ public class Typing implements Pvisitor {
         n.e2.accept(this);
         Expr e2 = this.expr;
         
-        if (n.op == Binop.Beq || n.op == Binop.Bneq || n.op == Binop.Blt || 
-            n.op == Binop.Ble || n.op == Binop.Bgt || n.op == Binop.Bge)
+        String s_op = " ";
+        int c = -1;
+        switch (n.op) {
+        case Badd: s_op = " + " ; c = 1; break;
+        case Bsub: s_op = " - " ; c = 1; break;
+        case Bmul: s_op = " * " ; c = 1; break;
+        case Bdiv: s_op = " / " ; c = 1; break;
+        case Beq:  s_op = " == "; c = 0; break;
+        case Bneq: s_op = " != "; c = 0; break;
+        case Blt:  s_op = " < " ; c = 0; break;
+        case Ble:  s_op = " <= "; c = 0; break;
+        case Bgt:  s_op = " > " ; c = 0; break;
+        case Bge:  s_op = " >= "; c = 0; break;
+        default:                         break;
+        }
+        
+        Typ t_int = new Tint();
+        
+        if ((c == 0 && !e1.typ.equals(e2.typ)) || 
+            (c == 1 && !(e1.typ.equals(t_int) && e2.typ.equals(t_int))))
         {    
-            if (!e1.typ.equals(e2.typ)) {
-                throw new Error(n.loc.toString() + ": different types (" +
-                    e1.typ.toString() + ", " + e2.typ.toString() + ")");
-            }
-        }
-        else if (n.op == Binop.Badd || n.op == Binop.Bsub ||
-                 n.op == Binop.Bmul || n.op == Binop.Bdiv)
-        {
-        	//TODO Tidy up the "e1 = " and "e2 = "
-            if (!(e1.typ instanceof Tint || e1.typ instanceof Ttypenull)) {
-                throw new Error("e1 = " + n.loc.toString() + ": should be int. " +
-                    e1.typ.toString() + " given");
-            }
-            if (!(e2.typ instanceof Tint || e2.typ instanceof Ttypenull)) {
-                throw new Error("e2 = " +n.loc.toString() + ": should be int. " + 
-                    e2.typ.toString() + " given");
-            }
-        }
-        if(n.op == Binop.Bdiv && e2.typ instanceof Ttypenull) {
-        	throw new Error(n.loc.toString() + ": Division by zero.");
+            throw new Error(n.loc.toString() + ": unsupported operation: " + 
+                e1.typ.toString() + s_op + e2.typ.toString());
         }
         
         this.expr = new Ebinop(n.op, e1, e2);
-        this.expr.typ = new Tint();
+        this.expr.typ = t_int;
 	}
 
 	@Override
@@ -178,18 +167,15 @@ public class Typing implements Pvisitor {
         Expr e = this.expr;
         
         if (!e.typ.equals(new Tvoidstar())) {
-            throw new Error(n.loc.toString() + ": should be struct *; " + 
-                e.typ.toString() + " given");
+            throw new Error(n.loc.toString() + ": unsupported operation: " + 
+                e.typ.toString() + " -> " + n.f);
         }
         Structure s = ((Tstructp) e.typ).s;
         if (!s.fields.containsKey(n.f)) {
             throw new Error(n.loc.toString() + ": " + s.toString() + 
                 " doesn't contain field " + n.f);
         }
-        if(s.is_null) {
-        	throw new Error(n.loc.toString() + ": " + s.toString() + 
-                    " null pointer exception");
-        }
+        
         Field f = s.fields.get(n.f);
         
         this.expr = new Eaccess_field(e, f);
@@ -233,7 +219,7 @@ public class Typing implements Pvisitor {
 	public void visit(Psizeof n) {
 		
         if (!this.structs.containsKey(n.id)) {
-            throw new Error(n.loc.toString() + ": " + n.id + " not defined");
+            throw new Error(n.loc.toString() + ": " + n.id + " undeclared");
         }
     
         this.expr = new Esizeof(this.structs.get(n.id));
@@ -364,9 +350,9 @@ public class Typing implements Pvisitor {
         	if (this.vars.get(this.vars.size()-1).containsKey(dv.id)) {
                 throw new Error("redefinition of variable " + dv.id + 
                         " inside function " + fun_name);
-        	}
-        	
-        	dv.typ.accept(this);
+            }
+         
+            dv.typ.accept(this);
         	fun_formals.add(new Decl_var(this.typ, dv.id));
         	this.vars.get(this.vars.size()-1).put(dv.id, dv);
         }

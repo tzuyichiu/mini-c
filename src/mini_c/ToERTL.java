@@ -23,7 +23,7 @@ public class ToERTL implements RTLVisitor {
 	
 	
 	/*
-	 * Rule : - RTL_Label gives the label of the visited RTL in the complete RTLgraph
+	 * Rule: - RTL_Label gives the label of the visited RTL in RTLgraph
 	 * 		  - last_fresh is the latest fresh label generated
 	 */
 	@Override
@@ -125,7 +125,6 @@ public class ToERTL implements RTLVisitor {
 		visited_labels.add(o.l2);
 		Label l2 = o.l2;
         if (rtl2 != null) rtl2.accept(this);
-        //else l2 = this.ertlgraph.add(new ERreturn());
         
 		this.ertlgraph.put(myLabel,
 			new ERmbbranch(o.m, o.r1, o.r2, o.l1, l2));
@@ -148,10 +147,11 @@ public class ToERTL implements RTLVisitor {
 			k = 6;
 			Register r1 = new Register();
 			this.last_fresh = this.ertlgraph.add(new ERmbinop(
-				Mbinop.Msub, r1, Register.rsp, o.l));
-			this.last_fresh = this.ertlgraph.add(new ERconst(8*(n_args-6), r1, this.last_fresh));
+                Mbinop.Msub, r1, Register.rsp, o.l));
+			this.last_fresh = this.ertlgraph.add(
+                new ERconst(8*(n_args-6), r1, this.last_fresh));
 		} else {
-			//If no 5. phase, transfer control to o.l
+			// If no 5. phase, transfer control to o.l
 			this.last_fresh = o.l;
 		}
 		
@@ -159,24 +159,28 @@ public class ToERTL implements RTLVisitor {
 		this.last_fresh = this.ertlgraph.add(new ERmbinop(
 			Mbinop.Mmov, Register.rax, o.r, this.last_fresh));
 		
-		if(n_args > 0) {
+		if (n_args > 0) {
 			// 3. Call f(k)
-			this.last_fresh = this.ertlgraph.add(new ERcall(o.s, k, this.last_fresh));
+			this.last_fresh = this.ertlgraph.add(
+                new ERcall(o.s, k, this.last_fresh));
 		
-			// 2. If n > 6, pass the other arguments on the stack with push_param
+			// 2. If n > 6, pass the other arguments on the stack
 			for (int i=n_args-1; i>=6; i--) {
-				this.last_fresh = this.ertlgraph.add(new ERpush_param(o.rl.get(i), this.last_fresh));
+				this.last_fresh = this.ertlgraph.add(
+                    new ERpush_param(o.rl.get(i), this.last_fresh));
 			}
 			
 			// 1. Pass the min(n, 6) arguments inside corresponding register
 			for (int i=k-1; i>=1; i--) {
 				this.last_fresh = this.ertlgraph.add(new ERmbinop(
-					Mbinop.Mmov, o.rl.get(i), Register.parameters.get(i), this.last_fresh));
+                    Mbinop.Mmov, o.rl.get(i), 
+                    Register.parameters.get(i), this.last_fresh));
 			}
-			this.ertlgraph.put(myLabel,
-				new ERmbinop(Mbinop.Mmov, o.rl.get(0), Register.parameters.get(0), this.last_fresh));
+			this.ertlgraph.put(myLabel, new ERmbinop(
+                Mbinop.Mmov, o.rl.get(0), 
+                Register.parameters.get(0), this.last_fresh));
 		} else {
-			//No arguments, tranfert control directly to 3.
+			// No arguments, tranfert control directly to 3.
 			this.ertlgraph.put(myLabel,
 				new ERcall(o.s, k, this.last_fresh));
 		}
@@ -204,7 +208,8 @@ public class ToERTL implements RTLVisitor {
         this.last_fresh = this.ertlgraph.add(new ERreturn());
         
         // 3. Free the activation table
-        this.last_fresh = this.ertlgraph.add(new ERdelete_frame(this.last_fresh));
+        this.last_fresh = this.ertlgraph.add(
+            new ERdelete_frame(this.last_fresh));
 
         // 2. Retreive the callee-saved registers
         for (int i=0; i<Register.callee_saved.size(); i++) {
@@ -217,8 +222,9 @@ public class ToERTL implements RTLVisitor {
         }
         
         // 1. Copy the return value into %rax
-        this.ertlgraph.put(o.exit,
-        		new ERmbinop(Mbinop.Mmov, o.result, Register.rax, this.last_fresh));
+        this.ertlgraph.put(o.exit, new ERmbinop(
+            Mbinop.Mmov, o.result, Register.rax, this.last_fresh));
+        
         // *** Time for recursion ***
         visited_labels = new LinkedList<>();
         this.rtlgraph = o.body;
@@ -232,13 +238,13 @@ public class ToERTL implements RTLVisitor {
         int k = n_args;
         if (n_args > 6) k = 6;
         
-        //Cheat on last_fresh meaning here : force control to be passed to o.entry
+        // Cheat on last_fresh meaning: force control to be passed to o.entry
         this.last_fresh = o.entry;
         
         // 4. Copy the other parameters into pseudo-registers
 		for (int i=6; i <= n_args-1; i++) {
-			this.last_fresh = this.ertlgraph.add(
-                new ERget_param(8*(n_args+1-i), o.formals.get(i), this.last_fresh));
+			this.last_fresh = this.ertlgraph.add(new ERget_param(
+                8*(n_args+1-i), o.formals.get(i), this.last_fresh));
 		}
 		
 		// 3. Pass the min(n, 6) parameters into pseudo-register
@@ -256,7 +262,8 @@ public class ToERTL implements RTLVisitor {
 		}
 
         // 1. Alloc the activation table with alloc_frame
-        this.last_fresh = this.ertlgraph.add(new ERalloc_frame(this.last_fresh));
+        this.last_fresh = this.ertlgraph.add(
+            new ERalloc_frame(this.last_fresh));
         
         this.ertlfun = new ERTLfun(o.name, o.formals.size());
         this.ertlfun.body = this.ertlgraph;

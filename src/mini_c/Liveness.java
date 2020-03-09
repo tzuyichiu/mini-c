@@ -15,19 +15,22 @@ class Liveness {
     Liveness(ERTLgraph g) {
         this.info = new HashMap<>();
         
-        g.graph.forEach((label, ertl) -> 
-            this.info.put(label, new LiveInfo(ertl))
-        );
+        g.graph.forEach((label, ertl) -> {
+            this.info.put(label, new LiveInfo(ertl));
+        });
 
         // Compute pred for each label
         g.graph.forEach((label, ertl) -> {
             for (Label s: this.info.get(label).succ) {
                 this.info.get(s).pred.add(label);
-            }
+            }    
         });
 
         // Algorithm of Kildall to compute ints and outs
-        Set<Label> ws = g.graph.keySet();
+        Set<Label> ws = new HashSet<>();
+        for (Label l: g.graph.keySet()) {
+            ws.add(l);
+        }
         while (ws.size() > 0) {
             Label l = ws.iterator().next();
             ws.remove(l);
@@ -90,13 +93,13 @@ class LiveInfo {
     public String toString() {
         String res = String.format("%-19s", this.instr);
         res += "  defs = ";
-        res += String.format("%-18s", Arrays.toString(this.ins.toArray()));
+        res += String.format("%-12s", Arrays.toString(this.defs.toArray()));
         res += "  uses = ";
-        res += String.format("%-18s", Arrays.toString(this.ins.toArray()));
+        res += String.format("%-18s", Arrays.toString(this.uses.toArray()));
         res += "  in = ";
         res += String.format("%-18s", Arrays.toString(this.ins.toArray()));
         res += "  out = ";
-        res += String.format("%-18s", Arrays.toString(this.ins.toArray()));
+        res += String.format("%-18s", Arrays.toString(this.outs.toArray()));
         return res;
     }
 }

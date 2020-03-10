@@ -7,11 +7,10 @@ class ToX86_64 implements LTLVisitor {
     private X86_64 asm; // code en cours de construction
     private HashSet<Label> visited; // instructions déjà traduites
     private Label ltlLabel;
-    private String fileName;
     
-    ToX86_64(String fileName) {
-        this.asm = new X86_64();
-        this.fileName = fileName;
+    ToX86_64(String file) {
+        this.asm = new X86_64(file);
+        this.visited = new HashSet();
     }
     
     private void lin(Label l) {
@@ -194,6 +193,6 @@ class ToX86_64 implements LTLVisitor {
         for (LTLfun fun: o.funs) {
             fun.accept(this);
         }
-        this.asm.printToFile(this.fileName);
+        this.asm.printToFile();
     }
 }

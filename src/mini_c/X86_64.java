@@ -1,6 +1,8 @@
 package mini_c;
 
 import java.io.FileWriter;
+import java.io.BufferedReader;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.Writer;
 import java.util.HashSet;
@@ -18,12 +20,15 @@ public class X86_64 {
 	/** segment de données */
 	private StringBuffer data;
 	/** étiquettes à conserver dans le code */
-  private HashSet<String> needed;
+    private HashSet<String> needed;
 
-	X86_64() {
+    private String file;
+
+	X86_64(String file) {
 		this.text = new LinkedList<>();
 		this.data = new StringBuffer();
-    this.needed = new HashSet<>();
+        this.needed = new HashSet<>();
+        this.file = file;
 	}
 	
 	/** ajoute une nouvelle instruction à la fin du code */
@@ -152,9 +157,9 @@ public class X86_64 {
 	X86_64 globl(String l) { return emit(".globl " + l); }
 	
 	/** imprime le programme assembleur dans un fichier */
-	void printToFile(String file) {
-		try {
-			Writer writer = new FileWriter(file);
+	void printToFile() {
+        try {
+			Writer writer = new FileWriter(this.file);
 			writer.write("\t.text\n");
 			for (LabelAsm lasm: this.text) {
 			  if (lasm instanceof Lab) {
@@ -169,6 +174,18 @@ public class X86_64 {
 		} catch (IOException e) {
 			throw new Error("cannot write to " + file);
 		}
-	}
-
+    }
+    
+    void print() {
+        System.out.println("== X86-64 =========================");
+        try (BufferedReader br = new BufferedReader(new FileReader(this.file))) 
+        {
+            String line;
+            while ((line = br.readLine()) != null) {
+                System.out.println(line);
+            }
+        } catch (IOException e) {
+            throw new Error("cannot read " + file);
+        }
+    }
 }

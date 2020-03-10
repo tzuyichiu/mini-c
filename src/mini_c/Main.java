@@ -10,6 +10,7 @@ public class Main {
   static boolean interp_asm = false;
   static boolean debug = false;
   static String file = null;
+  static String resultFile = null;
 
   static void usage() {
     System.err.println("mini-c [OPTIONS] file.c\n\nOPTION =\n"+
@@ -42,6 +43,7 @@ public class Main {
         if (file != null) usage();
         if (!arg.endsWith(".c")) usage();
         file = arg;
+        resultFile = arg.substring(0, arg.length()-1) + "s";
       }
     if (file == null) usage ();
 
@@ -88,11 +90,12 @@ public class Main {
         RTLfile rtl = (new ToRTL()).translate(tf);
     	ERTLfile ertl = (new ToERTL()).translate(rtl);
     	LTLfile ltl = (new ToLTL()).translate(ertl);
-        X86_64 asm = (new ToX86_64("test.asm").translate(ltl));
+        X86_64 asm = (new ToX86_64(resultFile)).translate(ltl);
         if (debug) {
     		rtl.print();
     		ertl.print();
-    		ltl.print();
+            ltl.print();
+            asm.print();
     	}
     	System.exit(0);
     }

@@ -6,6 +6,7 @@ public class Main {
   static boolean type_only = false;
   static boolean interp_rtl = false;
   static boolean interp_ertl = false;
+  static boolean interp_ltl = false;
   static boolean debug = false;
   static String file = null;
 
@@ -14,6 +15,7 @@ public class Main {
     											  "         --debug\n"+
     											  "         --interp-rtl\n"+
     											  "         --interp-ertl\n"+
+    											  "         --interp-ltl\n"+
     											  "         --parse-only\n"+
     											  "         --type-only\n");
     System.exit(1);
@@ -29,6 +31,8 @@ public class Main {
         interp_rtl = true;
       else if (arg.equals("--interp-ertl"))
     	interp_ertl = true;
+      else if (arg.equals("--interp-ltl"))
+    	interp_ltl = true;
       else if (arg.equals("--debug"))
         debug = true;
       else {
@@ -63,6 +67,18 @@ public class Main {
     		ertl.print();
     	}
     	new ERTLinterp(ertl);
+    	System.exit(0);
+    }
+    if (interp_ltl) {
+    	RTLfile rtl = (new ToRTL()).translate(tf);
+    	ERTLfile ertl = (new ToERTL()).translate(rtl);
+    	LTLfile ltl = (new ToLTL()).translate(ertl);
+    	if (debug) {
+    		rtl.print();
+    		ertl.print();
+    		ltl.print();
+    	}
+    	new LTLinterp(ltl);
     	System.exit(0);
     }
   }

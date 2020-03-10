@@ -16,3 +16,6 @@ test-rtl:
 
 test-ertl:
 	$(PGM) --debug --interp-ertl $(f)
+
+test-ltl:
+	$(PGM) --debug --interp-ltl $(f)

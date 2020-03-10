@@ -56,7 +56,7 @@ public class Coloring {
 				}
 			}
 			// 2. If we had a node with only one color but no preference, use it
-			if(oneColor != null) {
+			if(!colored && oneColor != null) {
 				Operand color = possibleColors.get(oneColor).pop();
 				this.colors.put(oneColor,color);
 				for (Register rNeighbour : ig.graph.get(oneColor).intfs) {

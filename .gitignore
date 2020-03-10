@@ -4,3 +4,4 @@
 /.classpath
 *.bck
 tests/out
+/analyze.txt

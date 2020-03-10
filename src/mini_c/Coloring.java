@@ -10,6 +10,11 @@ public class Coloring {
 	Map<Register, Operand> colors = new HashMap<>();
 	int nlocals = 0; // nombre d'emplacements sur la pile
 	
+	private Operand getColor(Register r) {
+		if (r.isHW()) return new Reg(r);
+		else return this.colors.get(r);
+	}
+	
 	Coloring(Interference ig){
 		//Filling the todo table with every pseudo register
 		LinkedList<Register> todo = new LinkedList<>();
@@ -35,24 +40,29 @@ public class Coloring {
 		//Coloration
 		while (!todo.isEmpty()) {
 			boolean colored = false;
-			// 1. Look for nodes with one color possible and at least one preference
+			// 1. Look for nodes with one color possible and at least one preference edge to the available color
 			Register oneColor = null;
 			for (Register r : todo) {
 				if (possibleColors.get(r).size() == 1) {
 					//Note this register : could be used in 2.
 					oneColor = r;
-					if (!ig.graph.get(r).prefs.isEmpty()) {
-						Operand color = possibleColors.get(r).pop();
-						this.colors.put(r,color);
-						for (Register rNeighbour : ig.graph.get(r).intfs) {
-							if (possibleColors.containsKey(rNeighbour)) {							
-								possibleColors.get(rNeighbour).remove(color);
+					Operand color = possibleColors.get(r).get(0);
+					for (Register rPref : ig.graph.get(r).prefs) {
+						if (!todo.contains(rPref) && this.getColor(rPref).equals(color) && 
+								!ig.graph.get(r).intfs.contains(rPref)) {							
+							this.colors.put(r,color);
+							for (Register rNeighbour : ig.graph.get(r).intfs) {
+								if (possibleColors.containsKey(rNeighbour)) {							
+									possibleColors.get(rNeighbour).remove(color);
+								}
 							}
+							colored = true;
+							todo.remove(r);
+							possibleColors.get(r).pop();
+							break;
 						}
-						colored = true;
-						todo.remove(r);
-						break;
 					}
+					if (colored) break;
 				}
 			}
 			// 2. If we had a node with only one color but no preference, use it
@@ -67,25 +77,24 @@ public class Coloring {
 				colored = true;
 				todo.remove(oneColor);
 			}
-			// 3. Else, look for a node with a preference for an already colored node
+			// 3. Else, look for a node with a preference for an already colored node in an available color
 			if (!colored) {
 				for (Register r : todo) {
 					if (!ig.graph.get(r).prefs.isEmpty()) {
 						Register rAlrColored = null;
 						for (Register rPref : ig.graph.get(r).prefs) {
-							if (!todo.contains(rPref) || rPref.isHW()) {
-								// rPref already colored found
+							if (!todo.contains(rPref) && !ig.graph.get(r).intfs.contains(rPref) &&
+									possibleColors.get(r).contains(this.getColor(rPref))) {
+								// rPref already colored found in an available color
 								rAlrColored = rPref;
 								break;
 							}
 						}
 						if (rAlrColored != null) {
-							Operand color = null;
-							if (rAlrColored.isPseudo()) color = this.colors.get(rAlrColored);
-							else color = new Reg(rAlrColored);
+							Operand color = this.getColor(rAlrColored);
 							this.colors.put(r,color);
 							for (Register rNeighbour : ig.graph.get(r).intfs) {
-								if (possibleColors.containsKey(rNeighbour)) {							
+								if (possibleColors.containsKey(rNeighbour)) {
 									possibleColors.get(rNeighbour).remove(color);
 								}
 							}
@@ -116,7 +125,7 @@ public class Coloring {
 			// Failed to find a register to color, so spill a register
 			if (!colored) {
 				Register r = todo.pop();
-				this.colors.put(r,new Spilled(8*this.nlocals));
+				this.colors.put(r,new Spilled(-8*(this.nlocals+1)));
 				this.nlocals++;
 			}
 		}

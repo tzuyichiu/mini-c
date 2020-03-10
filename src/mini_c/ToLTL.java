@@ -191,13 +191,13 @@ class ToLTL implements ERTLVisitor {
 		checkAndAccept(o.l);
 		Operand rColor = this.getColor(o.r);
 		if (!this.isSpilled(rColor)) {
-			this.graph.put(myLabel, new Lload(Register.rsp, o.i, ((Reg) rColor).r, o.l));
+			this.graph.put(myLabel, new Lload(Register.rbp, o.i, ((Reg) rColor).r, o.l));
 		}
 		else {
 			// o.r is on the stack, we have to use one more instruction
 			this.last_fresh = this.graph.add(
 					new Lmbinop(Mbinop.Mmov, new Reg(Register.tmp1), rColor, o.l));
-			this.graph.put(myLabel, new Lload(Register.rsp, o.i, Register.tmp1, this.last_fresh));
+			this.graph.put(myLabel, new Lload(Register.rbp, o.i, Register.tmp1, this.last_fresh));
 		}
 	}
 	@Override

@@ -10,7 +10,7 @@ class ToRTL implements Visitor {
 	private RTLgraph graph; // graphe en cours de construction
 	private RTLfun fun;
 	private RTLfile file;
-	private Label l;
+	private Label lastFresh;
 	private Register r;
 	private HashMap<String,Register> var2regs;
 	private HashMap<String,Register> arg2regs;
@@ -67,7 +67,8 @@ class ToRTL implements Visitor {
 
 	@Override
 	public void visit(Econst n) {
-		this.l = this.graph.add(new Rconst(n.i, this.r, this.l));
+		this.lastFresh = this.graph.add(
+            new Rconst(n.i, this.r, this.lastFresh));
 	}
 
 	@Override
@@ -76,14 +77,16 @@ class ToRTL implements Visitor {
 		if (r1 == null) {
 			r1 = this.arg2regs.get(n.i);
 		}
-		this.l = this.graph.add(new Rmbinop(Mbinop.Mmov, r1, this.r, this.l));
+		this.lastFresh = this.graph.add(
+            new Rmbinop(Mbinop.Mmov, r1, this.r, this.lastFresh));
 	}
 
 	@Override
 	public void visit(Eaccess_field n) {
 
 		Register r1 = new Register();
-		this.l = this.graph.add(new Rload(r1, n.f.offset, this.r, this.l));
+		this.lastFresh = this.graph.add(
+            new Rload(r1, n.f.offset, this.r, this.lastFresh));
 		this.r = r1;
 		n.e.accept(this);
 		
@@ -96,15 +99,17 @@ class ToRTL implements Visitor {
 		if (r1 == null) {
 			r1 = this.arg2regs.get(n.i);
 		}
-		this.l = this.graph.add(new Rmbinop(Mbinop.Mmov, this.r, r1, this.l));
+		this.lastFresh = this.graph.add(
+            new Rmbinop(Mbinop.Mmov, this.r, r1, this.lastFresh));
 		n.e.accept(this);
 	}
 
 	@Override
 	public void visit(Eassign_field n) {
 		Register r1 = new Register();
-		Label l1 = this.graph.add(new Rstore(r1, this.r, n.f.offset, this.l));
-		this.l = l1;
+		Label l1 = this.graph.add(
+            new Rstore(r1, this.r, n.f.offset, this.lastFresh));
+		this.lastFresh = l1;
 		n.e1.accept(this);
 		this.r = r1;
 		n.e2.accept(this);
@@ -115,25 +120,28 @@ class ToRTL implements Visitor {
 		switch (n.u) {
         case Uneg:
             
-            // We create a node "L1: sub r1 r2" (L1 and r1 fresh), and r2 
-            // given recursively by the previous visitor.
-            // Then we create another node to put "L2: mov $0 r2" (L2 fresh)
-            // Finally we recursively process the n.e expression with 
-            // references to r1 and L2 (stored in this.r and this.l)
-
+            /**
+             *We create a node "L1: sub r1 r2" (L1 and r1 fresh), and r2 
+             * given recursively by the previous visitor.
+             * Then we create another node to put "L2: mov $0 r2" (L2 fresh)
+             * Finally we recursively process the n.e expression with 
+             * references to r1 and L2 (stored in this.r and this.lastFresh)
+             */
             Register r1 = new Register();
             Register r2 = this.r;
-            this.l = this.graph.add(new Rmbinop(Mbinop.Msub, r1, r2, this.l)); 
-            // the returned label is now L1 (see above). Stored in this.l
+            this.lastFresh = this.graph.add(
+                new Rmbinop(Mbinop.Msub, r1, r2, this.lastFresh)); 
+            // the returned label is now L1. Stored in this.lastFresh
             
-            this.l = this.graph.add(new Rconst(0, r2, this.l)); 
+            this.lastFresh = this.graph.add(new Rconst(0, r2, this.lastFresh)); 
             // the returned label is now L2
             this.r = r1;
             n.e.accept(this);
             break;
         
         case Unot:		
-            this.l = this.graph.add(new Rmunop(new Msetei(0), this.r, this.l));
+            this.lastFresh = this.graph.add(
+                new Rmunop(new Msetei(0), this.r, this.lastFresh));
             n.e.accept(this);
             break;
 		}
@@ -161,14 +169,15 @@ class ToRTL implements Visitor {
 		}
         
         // not Band, Bor
-		/* 
+		/** 
 		 * |!| Careful here : we want to compute e1 op e2 with r2 <- r2 op r1
 		 * so we have to put e1 in r2 and e2 in r1 
 		 */
         if (c == -1) {
 			Register r1 = new Register();
 			Register r2 = this.r;
-			this.l = this.graph.add(new Rmbinop(mb, r1, r2, this.l));
+			this.lastFresh = this.graph.add(
+                new Rmbinop(mb, r1, r2, this.lastFresh));
 			this.r = r1;
 			n.e2.accept(this);
 			this.r = r2;
@@ -176,13 +185,16 @@ class ToRTL implements Visitor {
         }
         // Band, Bor
 		else {
-			Label l_true = this.graph.add(new Rconst(c, this.r, this.l));
-			Label l_false = this.graph.add(new Rconst(1-c, this.r, this.l));
+			Label l_true = this.graph.add(
+                new Rconst(c, this.r, this.lastFresh));
+			Label l_false = this.graph.add(
+                new Rconst(1-c, this.r, this.lastFresh));
 			Label if_e1_false = this.graph.add(
                 new Rmubranch(mub, this.r, l_true, l_false));
-			this.l = if_e1_false;
+			this.lastFresh = if_e1_false;
 			n.e2.accept(this);	
-			this.l = this.graph.add(new Rmubranch(mub, this.r, l_true, this.l));
+			this.lastFresh = this.graph.add(
+                new Rmubranch(mub, this.r, l_true, this.lastFresh));
 			n.e1.accept(this);
         }
 	}
@@ -194,7 +206,8 @@ class ToRTL implements Visitor {
 			rl.add(new Register());
 		}
 		
-		this.l = this.graph.add(new Rcall(this.r, n.i, rl, this.l));
+		this.lastFresh = this.graph.add(
+            new Rcall(this.r, n.i, rl, this.lastFresh));
 
 		Iterator<Register> listIter = rl.listIterator();
 		for (Expr args: n.el) {
@@ -205,8 +218,8 @@ class ToRTL implements Visitor {
 
 	@Override
 	public void visit(Esizeof n) {
-		
-		this.l = this.graph.add(new Rconst(n.s.size, this.r, this.l));
+		this.lastFresh = this.graph.add(
+            new Rconst(n.s.size, this.r, this.lastFresh));
 	}
 
 	@Override
@@ -221,38 +234,42 @@ class ToRTL implements Visitor {
 
 	@Override
 	public void visit(Sif n) {
-		Label prev_l = this.l;
+		Label prev_l = this.lastFresh;
         n.s1.accept(this);
-        Label truel = this.l;
-        this.l = prev_l;
+        Label truel = this.lastFresh;
+        this.lastFresh = prev_l;
         n.s2.accept(this);
-        Label falsel = this.l;
+        Label falsel = this.lastFresh;
     
         Register r1 = new Register();
         this.r = r1;
-        this.l = this.graph.add(new Rmubranch(new Mjnz(), r1, truel, falsel));
+        this.lastFresh = this.graph.add(
+            new Rmubranch(new Mjnz(), r1, truel, falsel));
         n.e.accept(this);
 	}
 
 	@Override
 	public void visit(Swhile n) {
         
-        // Since we execute the statements in the reverse order, this.l is
-        // the label of the statement just after the while loop: stored in quitl
-        Label quitl = this.l;
+        /** 
+         * Since we execute the statements in the reverse order, lastFresh is
+         * the label of the statement just after the while loop: stored in quitl
+         */
+        Label quitl = this.lastFresh;
 
         // An independent label for goto at the end of the loop
         Label gotol = new Label();
-        this.l = gotol; // n.s will thus be directed to gotol
+        this.lastFresh = gotol; // n.s will thus be directed to gotol
         n.s.accept(this);
 
-        // now this.l contains the label of beginning of the loop
+        // now lastFresh contains the label of beginning of the loop
         Register r1 = new Register();
         this.r = r1;
-        this.l = this.graph.add(new Rmubranch(new Mjnz(), r1, this.l, quitl));
+        this.lastFresh = this.graph.add(
+            new Rmubranch(new Mjnz(), r1, this.lastFresh, quitl));
 
         n.e.accept(this);
-        this.graph.graph.put(gotol, new Rgoto(this.l));
+        this.graph.graph.put(gotol, new Rgoto(this.lastFresh));
         // should "goto" here!! (we evaluate again the Expr)
 	}
 
@@ -270,7 +287,7 @@ class ToRTL implements Visitor {
 
 	@Override
 	public void visit(Sreturn n) {
-		this.l = this.fun.exit;
+		this.lastFresh = this.fun.exit;
 		this.r = this.fun.result;
 		n.e.accept(this);
 	}
@@ -288,7 +305,7 @@ class ToRTL implements Visitor {
 		this.fun.locals = new HashSet<>();		
 		this.fun.exit = new Label();
 		n.fun_body.accept(this);
-		this.fun.entry = this.l;
+		this.fun.entry = this.lastFresh;
 		this.fun.body = this.graph;	
 	}
 

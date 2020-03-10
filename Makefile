@@ -19,3 +19,6 @@ test-ertl:
 
 test-ltl:
 	$(PGM) --debug --interp-ltl $(f)
+
+test-asm:
+	$(PGM) --debug --interp-asm $(f)

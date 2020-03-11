@@ -6,4 +6,4 @@
 tests/out
 /analyze.txt
 *.s
-tests/a.out
+*.out

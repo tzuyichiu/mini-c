@@ -139,13 +139,19 @@ class ToX86_64 implements LTLVisitor {
     
     @Override
     public void visit(Lmunop o) {
-        
+        String s = o.o.toString();
         if (o.m instanceof Maddi)   
-            this.asm.addq( "$" + ((Maddi) o.m).n, o.o.toString());
-        if (o.m instanceof Msetei) 
-            this.asm.sete( "$" + ((Msetei) o.m).n + ", " + o.o.toString());
-        if (o.m instanceof Msetnei)
-            this.asm.setne("$" + ((Msetnei) o.m).n + ", " + o.o.toString());
+            this.asm.addq("$" + ((Maddi) o.m).n, s);
+        if (o.m instanceof Msetei) {
+            this.asm.cmpq(((Msetei) o.m).n, s); 
+            this.asm.sete("%al"); 
+            this.asm.movzbq("%al", s);
+        }
+        if (o.m instanceof Msetnei) {
+            this.asm.cmpq(((Msetnei) o.m).n, s); 
+            this.asm.setne("%al"); 
+            this.asm.movzbq("%al", s);
+        }
         this.lin(o.l);
     }
     
@@ -154,17 +160,36 @@ class ToX86_64 implements LTLVisitor {
         String s1 = o.o1.toString();
         String s2 = o.o2.toString();
         switch (o.m) {
-            case Mmov  : this.asm.movq(s1, s2);  break;
-            case Madd  : this.asm.addq(s1, s2);  break;
-            case Msub  : this.asm.subq(s1, s2);  break;
-            case Mmul  : this.asm.imulq(s1, s2); break;
-            case Mdiv  : this.asm.cqto();       this.asm.idivq(s1); break;
-            case Msete : this.asm.cmpq(s1, s2); this.asm.sete("al"); this.asm.movq("al", s2); break;
-            case Msetne: this.asm.cmpq(s1, s2); this.asm.setne("al"); this.asm.movq("al", s2); break;
-            case Msetl : this.asm.cmpq(s1, s2); this.asm.setl("al"); this.asm.movq("al", s2);  break;
-            case Msetle: this.asm.cmpq(s1, s2); this.asm.setle("al"); this.asm.movq("al", s2); break;
-            case Msetg : this.asm.cmpq(s1, s2); this.asm.sete("al"); this.asm.movq("al", s2);  break;
-            case Msetge: this.asm.cmpq(s1, s2); this.asm.sete("al"); this.asm.movq("al", s2); break;
+            case Mmov : this.asm.movq(s1, s2); break;
+            case Madd : this.asm.addq(s1, s2); break;
+            case Msub : this.asm.subq(s1, s2); break;
+            case Mmul : this.asm.imulq(s1, s2); break;
+            case Mdiv : this.asm.cqto(); this.asm.idivq(s1); break;
+            // We suppose that the comparison result is always stored in %rax
+            case Msete : {
+                this.asm.cmpq(s1, s2); this.asm.sete("%al"); 
+                this.asm.movzbq("%al", s2); break;
+            }
+            case Msetne: {
+                this.asm.cmpq(s1, s2); this.asm.setne("%al"); 
+                this.asm.movzbq("%al", s2); break;
+            }
+            case Msetl : {
+                this.asm.cmpq(s1, s2); this.asm.setl("%al"); 
+                this.asm.movzbq("%al", s2); break;
+            }
+            case Msetle: {
+                this.asm.cmpq(s1, s2); this.asm.setle("%al"); 
+                this.asm.movzbq("%al", s2); break;
+            }
+            case Msetg : {
+                this.asm.cmpq(s1, s2); this.asm.setg("%al"); 
+                this.asm.movzbq("%al", s2); break;
+            }
+            case Msetge: {
+                this.asm.cmpq(s1, s2); this.asm.setge("%al"); 
+                this.asm.movzbq("%al", s2); break;
+            }
             
         }
         this.lin(o.l);

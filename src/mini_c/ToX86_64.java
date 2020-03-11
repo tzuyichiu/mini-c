@@ -87,6 +87,7 @@ class ToX86_64 implements LTLVisitor {
                 this.lin(o.l1);
             }
             else {
+                this.asm.needLabel(o.l2);
                 this.asm.jmp(o.l2.name);
             }
         }
@@ -111,6 +112,7 @@ class ToX86_64 implements LTLVisitor {
                 this.lin(o.l1);
             }
             else {
+                this.asm.needLabel(o.l2);
                 this.asm.jmp(o.l2.name);
             }
         }
@@ -119,6 +121,7 @@ class ToX86_64 implements LTLVisitor {
     @Override
     public void visit(Lgoto o) {
         if (this.visited.contains(o.l)) {
+            this.asm.needLabel(o.l);
             this.asm.jmp(o.l.name);
         }
         else {
@@ -144,13 +147,13 @@ class ToX86_64 implements LTLVisitor {
             this.asm.addq("$" + ((Maddi) o.m).n, s);
         if (o.m instanceof Msetei) {
             this.asm.cmpq(((Msetei) o.m).n, s); 
-            this.asm.sete("%al"); 
-            this.asm.movzbq("%al", s);
+            this.asm.sete("%r15b"); 
+            this.asm.movzbq("%r15b", s);
         }
         if (o.m instanceof Msetnei) {
             this.asm.cmpq(((Msetnei) o.m).n, s); 
-            this.asm.setne("%al"); 
-            this.asm.movzbq("%al", s);
+            this.asm.setne("%r15b"); 
+            this.asm.movzbq("%r15b", s);
         }
         this.lin(o.l);
     }
@@ -159,36 +162,58 @@ class ToX86_64 implements LTLVisitor {
     public void visit(Lmbinop o) {
         String s1 = o.o1.toString();
         String s2 = o.o2.toString();
+        String st1 = Register.tmp1.name;
+
         switch (o.m) {
-            case Mmov : this.asm.movq(s1, s2); break;
-            case Madd : this.asm.addq(s1, s2); break;
-            case Msub : this.asm.subq(s1, s2); break;
-            case Mmul : this.asm.imulq(s1, s2); break;
-            case Mdiv : this.asm.cqto(); this.asm.idivq(s1); break;
-            // We suppose that the comparison result is always stored in %rax
-            case Msete : {
-                this.asm.cmpq(s1, s2); this.asm.sete("%al"); 
-                this.asm.movzbq("%al", s2); break;
+            case Mmov: this.asm.movq(s1, s2); break;
+            case Madd: this.asm.addq(s1, s2); break;
+            case Msub: this.asm.subq(s1, s2); break;
+            
+            // For imulq, the dest MUST be a register instead of memory addr
+            case Mmul: {
+                if (o.o2 instanceof Reg) {
+                    this.asm.imulq(s1, s2);
+                }
+                else {
+                    this.asm.movq(s2, st1);
+                    this.asm.imulq(s1, st1);
+                    this.asm.movq(st1, s2);
+                }
+                break;
+            }
+
+            case Mdiv: this.asm.cqto(); this.asm.idivq(s1); break;
+            
+            // st1 + "b" is the lower-byte of the temporary register %r15 (st1)
+            case Msete: {
+                this.asm.xorq(st1, st1);
+                this.asm.cmpq(s1, s2); this.asm.sete(st1 + "b"); 
+                this.asm.movq(st1, s2); break;
             }
             case Msetne: {
-                this.asm.cmpq(s1, s2); this.asm.setne("%al"); 
-                this.asm.movzbq("%al", s2); break;
+                this.asm.xorq(st1, st1);
+                this.asm.cmpq(s1, s2); this.asm.setne(st1 + "b"); 
+                this.asm.movq(st1, s2); break;
             }
-            case Msetl : {
-                this.asm.cmpq(s1, s2); this.asm.setl("%al"); 
-                this.asm.movzbq("%al", s2); break;
+            case Msetl: {
+                this.asm.xorq(st1, st1);
+                this.asm.cmpq(s1, s2); this.asm.setl(st1 + "b"); 
+                this.asm.movq(st1, s2); break;
             }
             case Msetle: {
-                this.asm.cmpq(s1, s2); this.asm.setle("%al"); 
-                this.asm.movzbq("%al", s2); break;
+                this.asm.xorq(st1, st1);
+                this.asm.cmpq(s1, s2); this.asm.setle(st1 + "b"); 
+                this.asm.movq(st1, s2); break;
             }
-            case Msetg : {
-                this.asm.cmpq(s1, s2); this.asm.setg("%al"); 
-                this.asm.movzbq("%al", s2); break;
+            case Msetg: {
+                this.asm.xorq(st1, st1);
+                this.asm.cmpq(s1, s2); this.asm.setg(st1 + "b"); 
+                this.asm.movq(st1, s2); break;
             }
             case Msetge: {
-                this.asm.cmpq(s1, s2); this.asm.setge("%al"); 
-                this.asm.movzbq("%al", s2); break;
+                this.asm.xorq(st1, st1);
+                this.asm.cmpq(s1, s2); this.asm.setge(st1 + "b"); 
+                this.asm.movq(st1, s2); break;
             }
             
         }

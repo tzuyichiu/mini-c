@@ -3,21 +3,21 @@ package mini_c;
 import java.util.HashSet;
 
 class ToX86_64 implements LTLVisitor {
-    private LTLgraph cfg; // graphe en cours de traduction
-    private X86_64 asm; // code en cours de construction
-    private HashSet<Label> visited; // instructions déjà traduites
+    private LTLgraph cfg; // graph being translated
+    private X86_64 asm; // code being constructed
+    private HashSet<Label> visitedLabels; // statements already translated
     
     ToX86_64(String file) {
         this.asm = new X86_64(file);
-        this.visited = new HashSet<>();
+        this.visitedLabels = new HashSet<>();
     }
     
     private void lin(Label l) {
-        if (this.visited.contains(l)) {
+        if (this.visitedLabels.contains(l)) {
             this.asm.needLabel(l);
             this.asm.jmp(l.name);
         } else {
-            this.visited.add(l);
+            this.visitedLabels.add(l);
             this.asm.label(l);
             this.cfg.graph.get(l).accept(this);
         }
@@ -42,7 +42,7 @@ class ToX86_64 implements LTLVisitor {
     
     @Override
     public void visit(Lmubranch o) {
-        if (!this.visited.contains(o.l1)) {
+        if (!this.visitedLabels.contains(o.l1)) {
             if (o.m instanceof Mjz) {
                 this.asm.addq("$0", o.r.toString());
                 this.asm.jnz(o.l2.name);
@@ -82,7 +82,7 @@ class ToX86_64 implements LTLVisitor {
                 this.asm.jg(o.l1.name); 
             }
             
-            if (!this.visited.contains(o.l2)) {
+            if (!this.visitedLabels.contains(o.l2)) {
                 this.lin(o.l2);
                 this.lin(o.l1);
             }
@@ -96,7 +96,7 @@ class ToX86_64 implements LTLVisitor {
     @Override
     public void visit(Lmbbranch o) {
         this.asm.cmpq(o.r1.toString(), o.r2.toString());
-        if (!this.visited.contains(o.l1)) {
+        if (!this.visitedLabels.contains(o.l1)) {
             if (o.m == Mbbranch.Mjl) this.asm.jl(o.l2.name);    
             if (o.m == Mbbranch.Mjle) this.asm.jle(o.l2.name);
             
@@ -107,7 +107,7 @@ class ToX86_64 implements LTLVisitor {
             if (o.m == Mbbranch.Mjl) this.asm.jge(o.l1.name);    
             if (o.m == Mbbranch.Mjle) this.asm.jg(o.l1.name);
             
-            if (!this.visited.contains(o.l2)) {
+            if (!this.visitedLabels.contains(o.l2)) {
                 this.lin(o.l2);
                 this.lin(o.l1);
             }
@@ -120,7 +120,7 @@ class ToX86_64 implements LTLVisitor {
     
     @Override
     public void visit(Lgoto o) {
-        if (this.visited.contains(o.l)) {
+        if (this.visitedLabels.contains(o.l)) {
             this.asm.needLabel(o.l);
             this.asm.jmp(o.l.name);
         }
@@ -143,8 +143,9 @@ class ToX86_64 implements LTLVisitor {
     @Override
     public void visit(Lmunop o) {
         String s = o.o.toString();
-        if (o.m instanceof Maddi)   
+        if (o.m instanceof Maddi) {  
             this.asm.addq("$" + ((Maddi) o.m).n, s);
+        }
         if (o.m instanceof Msetei) {
             this.asm.cmpq(((Msetei) o.m).n, s); 
             this.asm.sete("%r15b"); 

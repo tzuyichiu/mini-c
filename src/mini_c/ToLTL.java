@@ -3,12 +3,12 @@ package mini_c;
 import java.util.LinkedList;
 
 class ToLTL implements ERTLVisitor {
-	private Coloring coloring; // coloriage de la fonction en cours de traduction
-	int size_locals; // taille pour les variables locales
-	LTLgraph graph;  // graphe en cours de construction
-	LinkedList<Label> visited_labels;
+	private Coloring coloring; // coloring of the fonction being translated
+	int sizeLocals; // size of local variables
+	LTLgraph graph;  // graph being constructed
+	LinkedList<Label> visitedLabels;
 	LTLfun ltlFun;
-	ERTLgraph ertlGraph;
+	ERTLgraph ertlGraph; // ERTL graph being translated
 	LTLfile ltlFile;
 	Label ertlLabel;
 	Label lastFresh;
@@ -20,7 +20,7 @@ class ToLTL implements ERTLVisitor {
 	private void checkAndAccept(Label l) {
 		this.ertlLabel = l;
 		ERTL ertl = this.ertlGraph.graph.get(l);
-		visited_labels.add(l);
+		visitedLabels.add(l);
 		if (ertl != null) ertl.accept(this);
 	}
 	
@@ -181,7 +181,7 @@ class ToLTL implements ERTLVisitor {
 	@Override
 	public void visit(ERgoto o) {
 		Label myLabel = this.ertlLabel;
-		if (!visited_labels.contains(o.l)) checkAndAccept(o.l);
+		if (!visitedLabels.contains(o.l)) checkAndAccept(o.l);
 		this.graph.put(myLabel, new Lgoto(o.l));
 	}
 	@Override
@@ -194,9 +194,9 @@ class ToLTL implements ERTLVisitor {
 	public void visit(ERalloc_frame o) {
 		Label myLabel = this.ertlLabel;
 		checkAndAccept(o.l);
-		if (this.size_locals != 0) {			
+		if (this.sizeLocals != 0) {			
 			this.lastFresh = this.graph.add(
-                new Lmunop(new Maddi(-8*this.size_locals), 
+                new Lmunop(new Maddi(-8*this.sizeLocals), 
                     new Reg(Register.rsp), o.l));
 			this.lastFresh = this.graph.add(
                 new Lmbinop(Mbinop.Mmov, new Reg(Register.rsp), 
@@ -212,7 +212,7 @@ class ToLTL implements ERTLVisitor {
 	public void visit(ERdelete_frame o) {
 		Label myLabel = this.ertlLabel;
 		checkAndAccept(o.l);
-		if (this.size_locals != 0) {
+		if (this.sizeLocals != 0) {
 			this.lastFresh = this.graph.add(new Lpop(Register.rbp, o.l));
             this.graph.put(myLabel, 
                 new Lmbinop(Mbinop.Mmov, new Reg(Register.rbp), 
@@ -266,10 +266,10 @@ class ToLTL implements ERTLVisitor {
 		this.ltlFun = new LTLfun(o.name);
 		this.ltlFun.entry = o.entry;
 		this.coloring = new Coloring(new Interference (new Liveness(o.body)));
-		this.size_locals = this.coloring.nlocals;
+		this.sizeLocals = this.coloring.nlocals;
 		this.graph = new LTLgraph();
 		this.ertlGraph = o.body;
-		visited_labels = new LinkedList<>();
+		this.visitedLabels = new LinkedList<>();
 		checkAndAccept(o.entry);
 		this.ltlFun.body = this.graph;
 	}

@@ -7,23 +7,23 @@ import java.util.Iterator;
 
 class ToRTL implements Visitor {
 	
-	private RTLgraph graph; // graphe en cours de construction
-	private RTLfun fun;
-	private RTLfile file;
+	private RTLgraph rtlGraph; // graph being constructed
+	private RTLfun rtlFun;
+	private RTLfile rtlFile;
 	private Label lastFresh;
 	private Register r;
 	private HashMap<String,Register> var2regs;
 	private HashMap<String,Register> arg2regs;
 	
 	ToRTL() {
-		this.graph = new RTLgraph();
+		this.rtlGraph = new RTLgraph();
 		this.var2regs = new HashMap<>();
 		this.arg2regs = new HashMap<>();
 	}
 	
 	public RTLfile translate(File tree) {
 		tree.accept(this);
-		return file;
+		return this.rtlFile;
 	}
 
 	@Override
@@ -56,7 +56,7 @@ class ToRTL implements Visitor {
 	@Override
 	public void visit(Decl_var n) {
 		Register r = new Register();
-		this.fun.locals.add(r);
+		this.rtlFun.locals.add(r);
 		this.var2regs.put(n.name, r);
 	}
 
@@ -67,7 +67,7 @@ class ToRTL implements Visitor {
 
 	@Override
 	public void visit(Econst n) {
-		this.lastFresh = this.graph.add(
+		this.lastFresh = this.rtlGraph.add(
             new Rconst(n.i, this.r, this.lastFresh));
 	}
 
@@ -77,7 +77,7 @@ class ToRTL implements Visitor {
 		if (r1 == null) {
 			r1 = this.arg2regs.get(n.i);
 		}
-		this.lastFresh = this.graph.add(
+		this.lastFresh = this.rtlGraph.add(
             new Rmbinop(Mbinop.Mmov, r1, this.r, this.lastFresh));
 	}
 
@@ -85,7 +85,7 @@ class ToRTL implements Visitor {
 	public void visit(Eaccess_field n) {
 
 		Register r1 = new Register();
-		this.lastFresh = this.graph.add(
+		this.lastFresh = this.rtlGraph.add(
             new Rload(r1, n.f.offset, this.r, this.lastFresh));
 		this.r = r1;
 		n.e.accept(this);
@@ -99,7 +99,7 @@ class ToRTL implements Visitor {
 		if (r1 == null) {
 			r1 = this.arg2regs.get(n.i);
 		}
-		this.lastFresh = this.graph.add(
+		this.lastFresh = this.rtlGraph.add(
             new Rmbinop(Mbinop.Mmov, this.r, r1, this.lastFresh));
 		n.e.accept(this);
 	}
@@ -107,7 +107,7 @@ class ToRTL implements Visitor {
 	@Override
 	public void visit(Eassign_field n) {
 		Register r1 = new Register();
-		Label l1 = this.graph.add(
+		Label l1 = this.rtlGraph.add(
             new Rstore(r1, this.r, n.f.offset, this.lastFresh));
 		this.lastFresh = l1;
 		n.e1.accept(this);
@@ -129,18 +129,18 @@ class ToRTL implements Visitor {
              */
             Register r1 = new Register();
             Register r2 = this.r;
-            this.lastFresh = this.graph.add(
+            this.lastFresh = this.rtlGraph.add(
                 new Rmbinop(Mbinop.Msub, r1, r2, this.lastFresh)); 
             // the returned label is now L1. Stored in this.lastFresh
             
-            this.lastFresh = this.graph.add(new Rconst(0, r2, this.lastFresh)); 
+            this.lastFresh = this.rtlGraph.add(new Rconst(0, r2, this.lastFresh)); 
             // the returned label is now L2
             this.r = r1;
             n.e.accept(this);
             break;
         
         case Unot:		
-            this.lastFresh = this.graph.add(
+            this.lastFresh = this.rtlGraph.add(
                 new Rmunop(new Msetei(0), this.r, this.lastFresh));
             n.e.accept(this);
             break;
@@ -176,7 +176,7 @@ class ToRTL implements Visitor {
         if (c == -1) {
 			Register r1 = new Register();
 			Register r2 = this.r;
-			this.lastFresh = this.graph.add(
+			this.lastFresh = this.rtlGraph.add(
                 new Rmbinop(mb, r1, r2, this.lastFresh));
 			this.r = r1;
 			n.e2.accept(this);
@@ -185,15 +185,15 @@ class ToRTL implements Visitor {
         }
         // Band, Bor
 		else {
-			Label l_true = this.graph.add(
+			Label l_true = this.rtlGraph.add(
                 new Rconst(c, this.r, this.lastFresh));
-			Label l_false = this.graph.add(
+			Label l_false = this.rtlGraph.add(
                 new Rconst(1-c, this.r, this.lastFresh));
-			Label if_e1_false = this.graph.add(
+			Label if_e1_false = this.rtlGraph.add(
                 new Rmubranch(mub, this.r, l_true, l_false));
 			this.lastFresh = if_e1_false;
 			n.e2.accept(this);	
-			this.lastFresh = this.graph.add(
+			this.lastFresh = this.rtlGraph.add(
                 new Rmubranch(mub, this.r, l_true, this.lastFresh));
 			n.e1.accept(this);
         }
@@ -206,7 +206,7 @@ class ToRTL implements Visitor {
 			rl.add(new Register());
 		}
 		
-		this.lastFresh = this.graph.add(
+		this.lastFresh = this.rtlGraph.add(
             new Rcall(this.r, n.i, rl, this.lastFresh));
 
 		Iterator<Register> listIter = rl.listIterator();
@@ -218,7 +218,7 @@ class ToRTL implements Visitor {
 
 	@Override
 	public void visit(Esizeof n) {
-		this.lastFresh = this.graph.add(
+		this.lastFresh = this.rtlGraph.add(
             new Rconst(n.s.size, this.r, this.lastFresh));
 	}
 
@@ -243,7 +243,7 @@ class ToRTL implements Visitor {
     
         Register r1 = new Register();
         this.r = r1;
-        this.lastFresh = this.graph.add(
+        this.lastFresh = this.rtlGraph.add(
             new Rmubranch(new Mjnz(), r1, truel, falsel));
         n.e.accept(this);
 	}
@@ -265,11 +265,11 @@ class ToRTL implements Visitor {
         // now lastFresh contains the label of beginning of the loop
         Register r1 = new Register();
         this.r = r1;
-        this.lastFresh = this.graph.add(
+        this.lastFresh = this.rtlGraph.add(
             new Rmubranch(new Mjnz(), r1, this.lastFresh, quitl));
 
         n.e.accept(this);
-        this.graph.graph.put(gotol, new Rgoto(this.lastFresh));
+        this.rtlGraph.graph.put(gotol, new Rgoto(this.lastFresh));
         // should "goto" here!! (we evaluate again the Expr)
 	}
 
@@ -287,34 +287,34 @@ class ToRTL implements Visitor {
 
 	@Override
 	public void visit(Sreturn n) {
-		this.lastFresh = this.fun.exit;
-		this.r = this.fun.result;
+		this.lastFresh = this.rtlFun.exit;
+		this.r = this.rtlFun.result;
 		n.e.accept(this);
 	}
 
 	@Override
 	public void visit(Decl_fun n) {
-		this.graph = new RTLgraph();
-		this.fun = new RTLfun(n.fun_name);
+		this.rtlGraph = new RTLgraph();
+		this.rtlFun = new RTLfun(n.fun_name);
 		for (Decl_var dvar: n.fun_formals) {
 			Register r = new Register();
-			this.fun.formals.add(r);
+			this.rtlFun.formals.add(r);
 			this.arg2regs.put(dvar.name, r);
 		}
-		this.fun.result = new Register();
-		this.fun.locals = new HashSet<>();		
-		this.fun.exit = new Label();
+		this.rtlFun.result = new Register();
+		this.rtlFun.locals = new HashSet<>();		
+		this.rtlFun.exit = new Label();
 		n.fun_body.accept(this);
-		this.fun.entry = this.lastFresh;
-		this.fun.body = this.graph;	
+		this.rtlFun.entry = this.lastFresh;
+		this.rtlFun.body = this.rtlGraph;	
 	}
 
 	@Override
 	public void visit(File n) {
-		this.file = new RTLfile();
+		this.rtlFile = new RTLfile();
 		for (Decl_fun f: n.funs) {
 			f.accept(this);
-			this.file.funs.add(this.fun);
+			this.rtlFile.funs.add(this.rtlFun);
 			this.var2regs = new HashMap<>();
 			this.arg2regs = new HashMap<>();
 		}		

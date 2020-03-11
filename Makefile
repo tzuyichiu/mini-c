@@ -6,8 +6,6 @@ f := test.c
 all: src/mini_c/*.java
 	$(JAVAC) src/mini_c/*.java
 
-.PHONY: test
-
 test-typing:
 	$(PGM) $(f)
 
@@ -20,5 +18,5 @@ test-ertl:
 test-ltl:
 	$(PGM) --debug --interp-ltl $(f)
 
-test-asm:
-	$(PGM) --debug --interp-asm $(f)
+test:
+	$(PGM) --debug $(f)

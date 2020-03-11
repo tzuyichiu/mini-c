@@ -12,24 +12,47 @@ https://www.enseignement.polytechnique.fr/informatique/INF564/projet/sujet-v1.pd
 
 Once inside the root directory, execute `make` to *compile (!)* this compiler. 
 
-Three `make` methods were defined in order to test our compiler by executing 
-`Main.java`:
+Four `make` targets were defined in order to test our compiler by executing 
+`Main.java` with the debug mode:
 
+- `make test`: generates the corresponding assembly code X86-64 inside a `.s` 
+file within the same directory as the source testing file. For example, 
+`test.c` will be transformed into `test.s`.
 - `make test-typing`: without any interpretation, used to test typing errors.
 - `make test-rtl`: generates the corresponding `RTLGraph`.
 - `make test-ertl`: generates the corresponding `ERTLGraph`.
 
-The default testing file is by default `test.c`, however one can specify a 
-testing file by passing it to the argument `f`:
-`make test-choice f=path/to/your/testing/file`
+The default testing file is `test.c`, however one can specify any other testing 
+file by passing it to the argument `f`:
 
-Besides, this project is provided with a directory `tests` including 
-available testing files. The following commands allow to launch the testing
-procedure:
+```bash
+make test-choice f=path/to/your/testing/file
+```
+
+Besides, this project is provided with a directory `tests` including available 
+testing files. The following commands allow to launch the testing procedure, 
+you being placed inside `tests`: 
 ```bash
 cd tests
+```
+
+- For Typing: 
+```bash
 ./run -2 ../mini-c
 ```
+- For RTL: 
+```bash
+./run -i "../mini-c --interp-rtl"
+```
+- For ERTL: 
+```bash
+./run -i "../mini-c --interp-ertl"
+```
+- For X86-64: 
+```bash
+./run -3 ../mini-c
+```
+
 
 ## Typing
 

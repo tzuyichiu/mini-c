@@ -1,18 +1,4 @@
-
-int main() {
-  int x;
-  x = 65;
-  putchar(x);
-  if (1) {
-    int y;
-    y = 66;
-    putchar(y);
-  } else {
-    int z;
-    z = 67;
-    putchar(z);
-  }
-  putchar(x);
-  putchar(10);
-  return 0;
+int fact(int acc, int n){
+	if (n <= 1) return acc;
+	return fact(acc * n, n - 1);
 }

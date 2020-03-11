@@ -12,6 +12,11 @@ public class Label {
 		this.name = "L" + next;
 	}
 	
+	// For tail calls, indicate to which function to point
+	public Label(String name) {
+		this.name = name;
+	}
+	
 	@Override
 	public int hashCode() {
 		return this.name.hashCode();

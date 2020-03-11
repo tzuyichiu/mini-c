@@ -185,7 +185,7 @@ public class X86_64 {
                 System.out.println(line);
             }
         } catch (IOException e) {
-            throw new Error("cannot read " + file);
+            throw new Error("cannot read " + this.file);
         }
     }
 }

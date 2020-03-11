@@ -7,7 +7,6 @@ public class Main {
   static boolean interp_rtl = false;
   static boolean interp_ertl = false;
   static boolean interp_ltl = false;
-  static boolean interp_asm = false;
   static boolean debug = false;
   static String file = null;
   static String resultFile = null;
@@ -35,8 +34,6 @@ public class Main {
     	interp_ertl = true;
       else if (arg.equals("--interp-ltl"))
         interp_ltl = true;
-      else if (arg.equals("--interp-asm"))
-        interp_asm = true;
       else if (arg.equals("--debug"))
         debug = true;
       else {
@@ -86,12 +83,14 @@ public class Main {
     	new LTLinterp(ltl);
     	System.exit(0);
     }
-    if (interp_asm) {
+    else {
         RTLfile rtl = (new ToRTL()).translate(tf);
     	ERTLfile ertl = (new ToERTL()).translate(rtl);
     	LTLfile ltl = (new ToLTL()).translate(ertl);
         X86_64 asm = (new ToX86_64(resultFile)).translate(ltl);
         if (debug) {
+            rtl.print();
+            ertl.print();
             ltl.print();
             asm.print();
     	}

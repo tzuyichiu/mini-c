@@ -3,21 +3,21 @@ package mini_c;
 import java.util.HashSet;
 
 class ToX86_64 implements LTLVisitor {
-    private LTLgraph cfg; // graphe en cours de traduction
-    private X86_64 asm; // code en cours de construction
-    private HashSet<Label> visited; // instructions déjà traduites
+    private LTLgraph cfg; // graph being translated
+    private X86_64 asm; // code being constructed
+    private HashSet<Label> visitedLabels; // statements already translated
     
     ToX86_64(String file) {
         this.asm = new X86_64(file);
-        this.visited = new HashSet<>();
+        this.visitedLabels = new HashSet<>();
     }
     
     private void lin(Label l) {
-        if (this.visited.contains(l)) {
+        if (this.visitedLabels.contains(l)) {
             this.asm.needLabel(l);
             this.asm.jmp(l.name);
         } else {
-            this.visited.add(l);
+            this.visitedLabels.add(l);
             this.asm.label(l);
             this.cfg.graph.get(l).accept(this);
         }
@@ -42,21 +42,23 @@ class ToX86_64 implements LTLVisitor {
     
     @Override
     public void visit(Lmubranch o) {
-        if (!this.visited.contains(o.l1)) {
+        String s = o.r.toString();
+        
+        if (!this.visitedLabels.contains(o.l1)) {
             if (o.m instanceof Mjz) {
-                this.asm.addq("$0", o.r.toString());
+                this.asm.addq("$0", s);
                 this.asm.jnz(o.l2.name);
             }
             if (o.m instanceof Mjnz) {
-                this.asm.addq("$0", o.r.toString());
+                this.asm.addq("$0", s);
                 this.asm.jz(o.l2.name);
             }
             if (o.m instanceof Mjlei) {            
-                this.asm.cmpq(((Mjlei) o.m).n, o.r.toString()); 
+                this.asm.cmpq(((Mjlei) o.m).n, s); 
                 this.asm.jg(o.l2.name); 
             }
             if (o.m instanceof Mjgi) { 
-                this.asm.cmpq(((Mjgi) o.m).n, o.r.toString()); 
+                this.asm.cmpq(((Mjgi) o.m).n, s); 
                 this.asm.jle(o.l2.name);
             }
             
@@ -66,23 +68,23 @@ class ToX86_64 implements LTLVisitor {
         }
         else {
             if (o.m instanceof Mjz) {
-                this.asm.addq("$0", o.r.toString());
+                this.asm.addq("$0", s);
                 this.asm.jz(o.l1.name);
             }
             if (o.m instanceof Mjnz) {
-                this.asm.addq("$0", o.r.toString());
+                this.asm.addq("$0", s);
                 this.asm.jnz(o.l1.name);
             }
             if (o.m instanceof Mjlei) {            
-                this.asm.cmpq(((Mjlei) o.m).n, o.r.toString()); 
+                this.asm.cmpq(((Mjlei) o.m).n, s); 
                 this.asm.jle(o.l1.name);  
             }
             if (o.m instanceof Mjgi) { 
-                this.asm.cmpq(((Mjgi) o.m).n, o.r.toString()); 
+                this.asm.cmpq(((Mjgi) o.m).n, s); 
                 this.asm.jg(o.l1.name); 
             }
             
-            if (!this.visited.contains(o.l2)) {
+            if (!this.visitedLabels.contains(o.l2)) {
                 this.lin(o.l2);
                 this.lin(o.l1);
             }
@@ -96,7 +98,7 @@ class ToX86_64 implements LTLVisitor {
     @Override
     public void visit(Lmbbranch o) {
         this.asm.cmpq(o.r1.toString(), o.r2.toString());
-        if (!this.visited.contains(o.l1)) {
+        if (!this.visitedLabels.contains(o.l1)) {
             if (o.m == Mbbranch.Mjl) this.asm.jl(o.l2.name);    
             if (o.m == Mbbranch.Mjle) this.asm.jle(o.l2.name);
             
@@ -107,7 +109,7 @@ class ToX86_64 implements LTLVisitor {
             if (o.m == Mbbranch.Mjl) this.asm.jge(o.l1.name);    
             if (o.m == Mbbranch.Mjle) this.asm.jg(o.l1.name);
             
-            if (!this.visited.contains(o.l2)) {
+            if (!this.visitedLabels.contains(o.l2)) {
                 this.lin(o.l2);
                 this.lin(o.l1);
             }
@@ -120,7 +122,7 @@ class ToX86_64 implements LTLVisitor {
     
     @Override
     public void visit(Lgoto o) {
-        if (this.visited.contains(o.l)) {
+        if (this.visitedLabels.contains(o.l)) {
             this.asm.needLabel(o.l);
             this.asm.jmp(o.l.name);
         }
@@ -143,17 +145,17 @@ class ToX86_64 implements LTLVisitor {
     @Override
     public void visit(Lmunop o) {
         String s = o.o.toString();
-        if (o.m instanceof Maddi)   
+        String st1 = Register.tmp1.name;
+        if (o.m instanceof Maddi) {  
             this.asm.addq("$" + ((Maddi) o.m).n, s);
+        }
         if (o.m instanceof Msetei) {
-            this.asm.cmpq(((Msetei) o.m).n, s); 
-            this.asm.sete("%r15b"); 
-            this.asm.movzbq("%r15b", s);
+            this.asm.xorq(st1, st1); this.asm.cmpq(((Msetei) o.m).n, s); 
+            this.asm.sete(st1 + "b"); this.asm.movq(st1, s);
         }
         if (o.m instanceof Msetnei) {
-            this.asm.cmpq(((Msetnei) o.m).n, s); 
-            this.asm.setne("%r15b"); 
-            this.asm.movzbq("%r15b", s);
+            this.asm.xorq(st1, st1); this.asm.cmpq(((Msetnei) o.m).n, s); 
+            this.asm.setne(st1 + "b"); this.asm.movq(st1, s);
         }
         this.lin(o.l);
     }
@@ -186,34 +188,34 @@ class ToX86_64 implements LTLVisitor {
             
             // st1 + "b" is the lower-byte of the temporary register %r15 (st1)
             case Msete: {
-                this.asm.xorq(st1, st1);
-                this.asm.cmpq(s1, s2); this.asm.sete(st1 + "b"); 
-                this.asm.movq(st1, s2); break;
+                this.asm.xorq(st1, st1); this.asm.cmpq(s1, s2); 
+                this.asm.sete(st1 + "b"); this.asm.movq(st1, s2); 
+                break;
             }
             case Msetne: {
-                this.asm.xorq(st1, st1);
-                this.asm.cmpq(s1, s2); this.asm.setne(st1 + "b"); 
-                this.asm.movq(st1, s2); break;
+                this.asm.xorq(st1, st1); this.asm.cmpq(s1, s2); 
+                this.asm.setne(st1 + "b"); this.asm.movq(st1, s2); 
+                break;
             }
             case Msetl: {
-                this.asm.xorq(st1, st1);
-                this.asm.cmpq(s1, s2); this.asm.setl(st1 + "b"); 
-                this.asm.movq(st1, s2); break;
+                this.asm.xorq(st1, st1); this.asm.cmpq(s1, s2); 
+                this.asm.setl(st1 + "b"); this.asm.movq(st1, s2); 
+                break;
             }
             case Msetle: {
-                this.asm.xorq(st1, st1);
-                this.asm.cmpq(s1, s2); this.asm.setle(st1 + "b"); 
-                this.asm.movq(st1, s2); break;
+                this.asm.xorq(st1, st1); this.asm.cmpq(s1, s2); 
+                this.asm.setle(st1 + "b"); this.asm.movq(st1, s2); 
+                break;
             }
             case Msetg: {
-                this.asm.xorq(st1, st1);
-                this.asm.cmpq(s1, s2); this.asm.setg(st1 + "b"); 
-                this.asm.movq(st1, s2); break;
+                this.asm.xorq(st1, st1); this.asm.cmpq(s1, s2); 
+                this.asm.setg(st1 + "b"); this.asm.movq(st1, s2); 
+                break;
             }
             case Msetge: {
-                this.asm.xorq(st1, st1);
-                this.asm.cmpq(s1, s2); this.asm.setge(st1 + "b"); 
-                this.asm.movq(st1, s2); break;
+                this.asm.xorq(st1, st1); this.asm.cmpq(s1, s2); 
+                this.asm.setge(st1 + "b"); this.asm.movq(st1, s2); 
+                break;
             }
             
         }

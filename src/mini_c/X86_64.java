@@ -165,7 +165,7 @@ public class X86_64 {
 			  if (lasm instanceof Lab) {
 			    if (this.needed.contains(lasm.s))
 			      writer.write(lasm.s + ":\n");
-			  } else
+               } else
 			    writer.write(lasm.s);
 			}
 			writer.write("\t.data\n");

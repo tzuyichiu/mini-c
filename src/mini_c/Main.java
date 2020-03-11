@@ -92,8 +92,6 @@ public class Main {
     	LTLfile ltl = (new ToLTL()).translate(ertl);
         X86_64 asm = (new ToX86_64(resultFile)).translate(ltl);
         if (debug) {
-    		rtl.print();
-    		ertl.print();
             ltl.print();
             asm.print();
     	}

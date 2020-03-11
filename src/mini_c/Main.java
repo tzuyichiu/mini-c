@@ -101,7 +101,7 @@ public class Main {
     	else {
     		RTLfile rtl = (new ToRTL()).translate(tf);
     		ERTLfile ertl = (new ToERTL()).translate(rtl);
-    		LTLfile ltl = (new ToLTL()).translate(ertl);    			
+    		LTLfile ltl = (new ToLTL()).translate(ertl);
     		X86_64 asm = (new ToX86_64(resultFile)).translate(ltl);
     		if (debug) {
     			rtl.print();
@@ -109,7 +109,6 @@ public class Main {
     			ltl.print();
     			asm.print();
     		}
-    		System.exit(0);
     	}
     }
     catch (FileNotFoundException e) {
@@ -117,5 +116,4 @@ public class Main {
     	System.exit(2);
     }
   }
-
 }

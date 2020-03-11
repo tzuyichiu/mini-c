@@ -64,19 +64,27 @@ you being placed inside `tests`:
 cd tests
 ```
 
-- For Typing: 
+- To test everything:
+```bash
+./run -all ../mini-c
+```
+- To test the syntax analysis:
 ```bash
 ./run -2 ../mini-c
 ```
-- For RTL: 
+- To test the typing:
+```bash
+./run -2 ../mini-c
+```
+- To test RTL: 
 ```bash
 ./run -i "../mini-c --interp-rtl"
 ```
-- For ERTL: 
+- To test ERTL: 
 ```bash
 ./run -i "../mini-c --interp-ertl"
 ```
-- For X86-64: 
+- To test the X86-64 compilation: 
 ```bash
 ./run -3 ../mini-c
 ```

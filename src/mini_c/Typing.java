@@ -18,6 +18,7 @@ public class Typing implements Pvisitor {
     private HashMap<String, Decl_fun> funs = new HashMap<>();
     private HashMap<String, Decl_fun> fun_prototypes = new HashMap<>();
     private HashMap<String, Structure> structs = new HashMap<>();
+    private boolean returnSeen = false;
     
 	File getFile() {
 		return this.file;
@@ -293,6 +294,8 @@ public class Typing implements Pvisitor {
 	public void visit(Preturn n) {
         n.e.accept(this);
         
+        this.returnSeen = true;
+        
         this.stmt = new Sreturn(this.expr);
 
         if (!this.return_typ.equals(this.expr.typ)) {
@@ -358,6 +361,9 @@ public class Typing implements Pvisitor {
         }
                 
         n.b.accept(this);
+        
+        if (!this.returnSeen) System.out.println("Warning : Non-void function must return "+n.ty);
+        
 		d_fun.fun_body = this.stmt;
 		this.funs.put(fun_name, d_fun);
 	}

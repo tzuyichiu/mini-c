@@ -23,8 +23,8 @@ public class ToERTL implements RTLVisitor {
 	
 	
 	/*
-	 * Rule: - RTL_Label gives the label of the visited RTL in RTLgraph
-	 * 		 - lastFresh is the latest fresh label generated
+	 * Rules: - rtlLabel gives the label of the visited RTL in RTLgraph
+	 * 		  - lastFresh is the last fresh label generated
 	 */
 	@Override
 	public void visit(Rconst o) {
@@ -140,7 +140,7 @@ public class ToERTL implements RTLVisitor {
         if (rtl != null) rtl.accept(this);
 		
 		int n_args = o.rl.size();
-		int k = n_args;
+		int k = n_args; // k = min(n_args, 6)
 		
 		// 5. If n > 6, pop 8×(n−6) bytes from the stack
 		if (n_args > 6) {
@@ -189,7 +189,7 @@ public class ToERTL implements RTLVisitor {
 	@Override
 	public void visit(Rgoto o) {
 		Label myLabel = this.rtlLabel;
-		if(!visitedLabels.contains(o.l)) {			
+		if (!visitedLabels.contains(o.l)) {
 			RTL rtl = this.rtlGraph.graph.get(o.l);
 			this.rtlLabel = o.l;
 			visitedLabels.add(o.l);

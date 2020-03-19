@@ -1,6 +1,6 @@
 # Summary of our work
 
-The compilation is seperated into five phases:
+The compilation is seperated into five steps:
 1. Examination of typing errors while constructing an abstract syntax tree
 2. Transformation of the abstract syntax tree into a `RTLGraph` 
 (*RTL: Register Transfer Language*)
@@ -89,16 +89,31 @@ RTL when `l1` is ready. And it works!
 
 In the previously constructed `RTLGraph`, we only made use of pseudo-registers,
 but in order to explicitly decide which registers and at which position on the
-stack we will need to store variables, arguments and results, we transform
-every RTL instruction into one or more ERTL instructions by specifying the use
+stack to store variables, arguments and results, we transform every RTL instruction into one or more ERTL instructions where we specify the use
 of physical regisiters and the manipulation of the stack. The class `ToERTL`
-implements a `RTLVisitor` defined in `RTL.java`, visiting different types
+implements a `RTLVisitor` defined in `RTL.java`, which visits different types
 of RTL instructions.
 
 ### Implementation and difficulties
 
-**TODO**
+Now that we have obtained a skeleton of the final assembly architecture, in 
+order to construct a corresponding `ERTLGraph`, we simply start from the entry 
+label of the `RTLGraph`, keep the same label name, transform every RTL 
+instruction into one or more ERTL instructions, and recursively visit the next 
+label(s). The use of `this.rtlLabel` allows every visitor to know from which 
+label it has been called, and construct the corresponding ERTL instruction with 
+the same label name. 
 
+The subtile point here is that when we are producing multiple ERTL 
+instructions from only one RTL instruction, fresh labels have to be created. 
+Similar to the construction of `RTLGraph`, these new instructions have to be 
+created in the reverse order.
+
+We also encountered another difficulty when translating the instruction
+`Rgoto`. While testing with Mini-C programs that contain a *while* loop, we 
+forgot not to visit a same label twice or more, making the visiting enter an
+infinite loop. We solved this problem by using a table called `visitedLabels` 
+that records every visited Labels.
 
 ## ERTLGraph to LTLGraph
 

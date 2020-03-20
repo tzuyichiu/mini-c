@@ -3,24 +3,24 @@ package mini_c;
 import java.util.LinkedList;
 import java.util.List;
 
-/** registre (physique ou pseudo-registres) */
+/** register (physical or pseudo-registers) */
 public class Register {
 
 	private static int next = 0;
 	
 	final String name;
 	
-	/** renvoie un pseudo-registre frais */ 
+	/** return a fresh pseudo-register */ 
 	Register() {
 		next++;
 		this.name = "#" + next;
 	}
 	
-	/** s'agit-il d'un pseudo-registre ? */ 
+	/** is it a pseudo-registre? */ 
 	boolean isPseudo() {
 		return this.name.charAt(0) == '#';
 	}
-	/** s'agit-il d'un registre physique ? */ 
+	/** is it a physical register? */ 
 	boolean isHW() {
 		return !this.isPseudo();
 	}
@@ -59,7 +59,8 @@ public class Register {
 	
 	static final Register r10 = new Register("%r10");
 	static final List<Register> caller_save = new LinkedList<Register>();
-	static {	caller_save.add(rax); caller_save.add(r10); 
+	static {	
+        caller_save.add(rax); caller_save.add(r10); 
 		for (Register r: parameters) caller_save.add(r);
 	}
 
@@ -75,7 +76,7 @@ public class Register {
 		// callee_save.add(r13); callee_save.add(r14); callee_save.add(r15);
 	}
 
-	/** ensemble des registres participant à l'allocation de registres */
+	/** set of registers participating the register allocation */
 	static final List<Register> allocatable = new LinkedList<Register>();
 	static {
 		for (Register r: caller_save) allocatable.add(r);
@@ -84,9 +85,6 @@ public class Register {
 	
 	static final Register rsp = new Register("%rsp");
 	static final Register rbp = new Register("%rbp");
-  static final Register tmp1 = new Register("%r15");
+    static final Register tmp1 = new Register("%r15");
 	static final Register tmp2 = new Register("%r11");
-	
-
-	
 }

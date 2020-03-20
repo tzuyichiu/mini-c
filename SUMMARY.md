@@ -89,8 +89,9 @@ RTL when `l1` is ready. And it works!
 
 In the previously constructed `RTLGraph`, we only made use of pseudo-registers,
 but in order to explicitly decide which registers and at which position on the
-stack to store variables, arguments and results, we transform every RTL instruction into one or more ERTL instructions where we specify the use
-of physical regisiters and the manipulation of the stack. The class `ToERTL`
+stack to store variables, arguments and results, we transform every RTL 
+instruction into one or more ERTL instructions where we specify the use of 
+physical regisiters and the manipulation of the stack. The class `ToERTL`
 implements a `RTLVisitor` defined in `RTL.java`, which visits different types
 of RTL instructions.
 

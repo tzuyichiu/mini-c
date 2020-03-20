@@ -1,8 +1,8 @@
 package mini_c;
 
-/** Opérations x86-64 utilisées pendant la sélection d'instructions */
+/** x86-64 operations for the selection of instructions */
 
-/** opération x86-64 unaire */
+/** unary x86-64 operation */
 abstract class Munop {}
 class Maddi extends Munop {
 	int n;
@@ -20,19 +20,9 @@ class Msetnei extends Munop {
 	public String toString() { return "setne $" + n; } 
 }
 
-/** opération x86-64 binaire */
+/** binary x86-64 operation */
 enum Mbinop {
-  Mmov
-, Madd
-, Msub
-, Mmul
-, Mdiv
-, Msete
-, Msetne
-, Msetl
-, Msetle
-, Msetg
-, Msetge
+    Mmov, Madd, Msub, Mmul, Mdiv, Msete, Msetne, Msetl, Msetle, Msetg, Msetge
 }
 
 /** opération x86-64 de branchement (unaire) */
@@ -56,6 +46,5 @@ class Mjgi extends Mubranch {
 
 /** opération x86-64 de branchement (binaire) */
 enum Mbbranch {
-  Mjl
-, Mjle
+    Mjl, Mjle
 }

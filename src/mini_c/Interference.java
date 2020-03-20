@@ -57,8 +57,9 @@ public class Interference{
 		for(Map.Entry<Label, LiveInfo> entry : lg.info.entrySet()) {
 			if (entry.getValue().instr instanceof ERmbinop && 
 					((ERmbinop) entry.getValue().instr).m.equals(Mbinop.Mmov) && 
-					!((ERmbinop) entry.getValue().instr).r1.equals(((ERmbinop) entry.getValue().instr).r2)) {
-				//We have the case "mov w v"
+					!((ERmbinop) entry.getValue().instr).r1.equals(
+                        ((ERmbinop) entry.getValue().instr).r2)) {
+				// We have the case "mov w v"
 				Register w = ((ERmbinop) entry.getValue().instr).r1;
 				Register v = ((ERmbinop) entry.getValue().instr).r2;
 				this.addPref(w,v);
@@ -73,7 +74,7 @@ public class Interference{
 				}
 			}
 			else {
-				//Not in case mov w v, add all interference edge
+				// Not in case mov w v, add all interference edge
 				Iterator<Register> itrDefs = entry.getValue().defs.iterator();
 				while (itrDefs.hasNext()) {
 					Register rDef = itrDefs.next();
@@ -92,9 +93,10 @@ public class Interference{
 	void print() {
 	    System.out.println("interference:");
 	    for (Register r: graph.keySet()) {
-	      Arcs a = graph.get(r);
-	      System.out.println("  " + r + " pref=" + a.prefs + " intf=" + a.intfs);
+            Arcs a = graph.get(r);
+            System.out.println("  " + r + 
+                                " pref = " + a.prefs + 
+                                " intf = " + a.intfs);
 	    }
-	  }
-	
+	}
 }

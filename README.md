@@ -4,7 +4,8 @@
 
 **Mini-C Compiler (MCC)** is a project done in Ecole Polytechnique, proposed in 
 the course INF564: Compilation. It is a compiler of Mini-C, a sub-language of 
-the C language whose standard is defined here : https://www.enseignement.polytechnique.fr/informatique/INF564/projet/sujet-v1.pdf.
+the C language whose standard is defined here: 
+https://www.enseignement.polytechnique.fr/informatique/INF564/projet/sujet-v1.pdf.
 
 Mini-C contains integers and pointers to structures, and is totally compatible 
 with C. The **MCC** is written in Java, takes a Mini-C program (`.c`) in input 
@@ -21,7 +22,8 @@ the root directory:
 ./mini-c [OPTION] your_mini_c_file.c
 ```
 
-where `[OPTION]` can define the verbosity (`--debug`) as well as the depth of compilation (`--interp-rtl`, etc.). See the `make` targets below to run the 
+where `[OPTION]` can define the verbosity (`--debug`) as well as the depth of 
+compilation (`--interp-rtl`, etc.). See the `make` targets below to run the 
 compiler on different depths of compilation. In any case, type the following 
 command for help:
 
@@ -49,7 +51,9 @@ file within the same directory as the source testing file. For example,
 - `make test-typing`: without any interpretation, used to test typing errors.
 - `make test-rtl`: generates the corresponding `RTLGraph`.
 - `make test-ertl`: generates the corresponding `ERTLGraph`.
-- `make test-ltl`: generates the corresponding `LTLGraph` and displays the `ERTLGraph` with register liveness, the register interferences and the register allocation deduced (called "coloring" where registers are colors).
+- `make test-ltl`: generates the corresponding `LTLGraph` and displays the 
+`ERTLGraph` with register liveness, the register interferences and the register 
+allocation deduced (called "coloring" where registers are colors).
 
 The default testing file is `test.c`, however one can specify any other testing 
 file by passing it to the argument `f`:

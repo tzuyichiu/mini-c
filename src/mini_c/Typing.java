@@ -3,13 +3,11 @@ package mini_c;
 import java.util.HashMap;
 import java.util.LinkedList;
 
-/* When we create an Expr give its type!!!!! */
-
 public class Typing implements Pvisitor {
 
-	// le résultat du typage sera mis dans cette variable
+	// the typing result will be stored inside this variable
 	private File file;
-    private Typ typ = new Ttypenull();
+    private Typ typ = new Ttypenull(); // any Expr is decorated with a type
     private Typ return_typ; // for statements
 	private Stmt stmt;
     private Expr expr;
@@ -362,7 +360,9 @@ public class Typing implements Pvisitor {
                 
         n.b.accept(this);
         
-        if (!this.returnSeen) System.out.println("Warning : Non-void function must return "+n.ty);
+        if (!this.returnSeen) 
+            System.out.println("Warning: Non-void function must return "
+                + n.ty);
         
 		d_fun.fun_body = this.stmt;
 		this.funs.put(fun_name, d_fun);

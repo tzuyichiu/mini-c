@@ -8,18 +8,18 @@ import java.io.Writer;
 import java.util.HashSet;
 import java.util.LinkedList;
 
-/** une étiquette (Lab) ou une instruction (Asm) */
-abstract    class LabelAsm { String s; }
+/** a Label (Lab) or an x86-64 instruction (Asm) */
+abstract class LabelAsm { String s; }
 class Lab extends LabelAsm { Lab(String s) { this.s = s; } }
 class Asm extends LabelAsm { Asm(String s) { this.s = s; } }
 
-/** programme assembleur x86-64 */
+/** assembly program x86-64 */
 public class X86_64 {
-  /** segment de code */
+    /** code segment */
 	private LinkedList<LabelAsm> text;
-	/** segment de données */
+	/** data segment */
 	private StringBuffer data;
-	/** étiquettes à conserver dans le code */
+	/** labels needed in the code */
     private HashSet<String> needed;
 
     private String file;
@@ -31,33 +31,34 @@ public class X86_64 {
         this.file = file;
 	}
 	
-	/** ajoute une nouvelle instruction à la fin du code */
+	/** add a new instruction at the end of the code */
 	X86_64 emit(String s) {
 		this.text.add(new Asm("\t" + s + "\n"));
 		return this;
 	}
 	
-	/** ajoute une étiquette qui doit rester dans le code
-	 *   (par ex. l'étiquette d'une fonction) */
-  X86_64 label(String s) {
-    this.text.add(new Lab(s));
-    this.needed.add(s);
-    return this;
-  }
-  /** ajoute une étiquette ; elle ne restera dans le code qui si
-   *  on appelle needLabel sur cette étiquette */
-  X86_64 label(Label l) {
-    this.text.add(new Lab(l.name));
-    return this;
-  }
-  /** déclare que cette étiquette devra rester dans le code */
-  void needLabel(Label l) {
-    needed.add(l.name);
-  }
+	/** add a label that has to stay in the code (e.g. label of a function) */
+    X86_64 label(String s) {
+        this.text.add(new Lab(s));
+        this.needed.add(s);
+        return this;
+    }
+    /** add a label
+     * 
+     * it will stay in the code only if we call needLabel on this label.
+     * */
+    X86_64 label(Label l) {
+        this.text.add(new Lab(l.name));
+        return this;
+    }
+    /** declare the label will stay in the code */
+    void needLabel(Label l) {
+        needed.add(l.name);
+    }
 
-  X86_64 movq(String op1, String op2) { return emit("movq " + op1 + ", " + op2); }
-	X86_64 movq(int n, String op) { return movq("$" + n, op); }
-  X86_64 movzbq(String op1, String op2) { return emit("movzbq " + op1 + ", " + op2); }
+    X86_64 movq(String op1, String op2) { return emit("movq " + op1 + ", " + op2); }
+    X86_64 movq(int n, String op) { return movq("$" + n, op); }
+    X86_64 movzbq(String op1, String op2) { return emit("movzbq " + op1 + ", " + op2); }
 
 	X86_64 incq(String op) { return emit("incq " + op); }
 	X86_64 decq(String op) { return emit("decq " + op); }
@@ -147,7 +148,7 @@ public class X86_64 {
 	X86_64 dlabel(String s) {
 	    this.data.append(s + ":\n");
 	    return this;
-	  }
+	}
 
 	X86_64 data(String s) { this.data.append("\t" + s + "\n"); return this; }
 	X86_64 string(String s) { return data(".string \"" + escaped(s) + "\""); }
@@ -156,7 +157,7 @@ public class X86_64 {
 	
 	X86_64 globl(String l) { return emit(".globl " + l); }
 	
-	/** imprime le programme assembleur dans un fichier */
+	/** print the assembly program in a file */
 	void printToFile() {
         try {
 			Writer writer = new FileWriter(this.file);

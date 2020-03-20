@@ -1,0 +1,16 @@
+
+The tests are organized in different categories:
+
+    syntax/bad/     refused by lexical or syntactic analysis
+    typing/bad/     refused by semantic analysis
+    typing/good/    accepted by semantic analysis
+    exec-fail/      compiled with success but the execution have to fail
+    exec/           compiled and executed with success, the expected result 
+                    being the same as .out
+
+The tests are cumulative i.e.
+
+- the files from typing/bad/, exec-fail/ and exec/ can be used for the category
+  syntax/good/
+
+- the files from exec-fail/ and exec/ can be used for the category typing/good/

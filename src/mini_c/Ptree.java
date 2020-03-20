@@ -10,32 +10,32 @@ enum Unop {
 	Uneg, Unot
 }
 
-// une classe pour les localisations
+// a class for the localization
 class Loc {
-  final int line, column;
-  
-  Loc(int line, int column) {
-    this.line = line;
-    this.column = column;
-  }
+    final int line, column;
 
-  @Override
-  public String toString() {
-    return "line " + line + ", column " + column;
-  }
+    Loc(int line, int column) {
+        this.line = line;
+        this.column = column;
+    }
+
+    @Override
+    public String toString() {
+        return "line " + line + ", column " + column;
+    }
 }
 
 class Pstring {
-  String id;
-  Loc loc;
-  public Pstring(String id, Loc loc) {
-    this.id = id;
-    this.loc = loc;
-  }
-  @Override
-  public String toString() {
-    return this.id;
-  }
+    String id;
+    Loc loc;
+    public Pstring(String id, Loc loc) {
+        this.id = id;
+        this.loc = loc;
+    }
+    @Override
+    public String toString() {
+        return this.id;
+    }
 }
 
 class Pfile {
@@ -131,13 +131,13 @@ class PTstruct extends Ptype {
 /* expressions */
 
 abstract class Pexpr {
-  Loc loc;
-  Pexpr(Loc loc) { this.loc = loc; }
-  abstract void accept(Pvisitor v);
+    Loc loc;
+    Pexpr(Loc loc) { this.loc = loc; }
+    abstract void accept(Pvisitor v);
 }
 
 abstract class Plvalue extends Pexpr{
-  Plvalue(Loc loc) { super(loc); }
+    Plvalue(Loc loc) { super(loc); }
 }
 
 class Pident extends Plvalue {
@@ -179,17 +179,17 @@ class Parrow extends Plvalue {
 }
 
 class Passign extends Pexpr {
-  Plvalue e1;
-  Pexpr e2;
+    Plvalue e1;
+    Pexpr e2;
 
-  public Passign(Plvalue e1, Pexpr e2) {
-    super(e1.loc);
-    this.e1 = e1;
-    this.e2 = e2;
-  }
-  void accept(Pvisitor v) {
-    v.visit(this);
-  }
+    public Passign(Plvalue e1, Pexpr e2) {
+        super(e1.loc);
+        this.e1 = e1;
+        this.e2 = e2;
+    }
+    void accept(Pvisitor v) {
+        v.visit(this);
+    }
 }
 
 class Pbinop extends Pexpr {
@@ -249,7 +249,7 @@ class Psizeof extends Pexpr {
 
 }
 
-/* instructions */
+/* statements */
 
 abstract class Pstmt {
     Loc loc;
@@ -338,42 +338,23 @@ class Pwhile extends Pstmt {
 }
 
 interface Pvisitor {
-
 	public void visit(PTint n);
-	
 	public void visit(PTstruct n);
-	
 	public void visit(Pint n);
-
 	public void visit(Pident n);
-
 	public void visit(Punop n);
-  
 	public void visit(Passign n);
-
 	public void visit(Pbinop n);
-
 	public void visit(Parrow n);
-
 	public void visit(Pcall n);
-
 	public void visit(Psizeof n);
-
 	public void visit(Pskip n);
-
 	public void visit(Peval n);
-
 	public void visit(Pif n);
-
 	public void visit(Pwhile n);
-
 	public void visit(Pbloc n);
-
 	public void visit(Preturn n);
-
 	public void visit(Pstruct n);
-
 	public void visit(Pfun n);
-
 	public void visit(Pfile n);
 }

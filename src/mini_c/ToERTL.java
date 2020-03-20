@@ -22,61 +22,49 @@ public class ToERTL implements RTLVisitor {
 	}
 	
 	
-	/*
-	 * Rules: - rtlLabel gives the label of the visited RTL in RTLgraph
-	 * 		  - lastFresh is the last fresh label generated
+    /** checkAndAccept: a method to recurse over the RTL graph
+	 *      - Ensures this.rtlLabel invariant is maintained
+	 *      - Recurses only if not exiting
 	 */
+	private void checkAndAccept(Label l) {
+		RTL rtl = this.rtlGraph.graph.get(l);
+		this.rtlLabel = l;
+		visitedLabels.add(l);
+        if (rtl != null) rtl.accept(this);
+    }
+    
 	@Override
 	public void visit(Rconst o) {
 		Label myLabel = this.rtlLabel;
-		RTL rtl = this.rtlGraph.graph.get(o.l);
-		this.rtlLabel = o.l;
-		visitedLabels.add(o.l);
-        if (rtl != null) rtl.accept(this);
-		
+		checkAndAccept(o.l);
 		this.ertlGraph.put(myLabel, new ERconst(o.i, o.r, o.l));
 	}
 
 	@Override
 	public void visit(Rload o) {
 		Label myLabel = this.rtlLabel;
-		RTL rtl = this.rtlGraph.graph.get(o.l);
-		this.rtlLabel = o.l;
-		visitedLabels.add(o.l);
-        if (rtl != null) rtl.accept(this);
-        
+		checkAndAccept(o.l);
 		this.ertlGraph.put(myLabel, new ERload(o.r1, o.i, o.r2, o.l));
 	}
 
 	@Override
 	public void visit(Rstore o) {
 		Label myLabel = this.rtlLabel;
-		RTL rtl = this.rtlGraph.graph.get(o.l);
-		this.rtlLabel = o.l;
-		visitedLabels.add(o.l);
-        if (rtl != null) rtl.accept(this);
-
+		checkAndAccept(o.l);
 		this.ertlGraph.put(myLabel, new ERstore(o.r1, o.r2, o.i, o.l));
 	}
 
 	@Override
 	public void visit(Rmunop o) {
 		Label myLabel = this.rtlLabel;
-		RTL rtl = this.rtlGraph.graph.get(o.l);
-		this.rtlLabel = o.l;
-		visitedLabels.add(o.l);
-        if (rtl != null) rtl.accept(this);
-
+		checkAndAccept(o.l);
 		this.ertlGraph.put(myLabel, new ERmunop(o.m, o.r, o.l));
 	}
 
 	@Override
 	public void visit(Rmbinop o) {
 		Label myLabel = this.rtlLabel;
-		RTL rtl = this.rtlGraph.graph.get(o.l);
-		this.rtlLabel = o.l;
-		visitedLabels.add(o.l);
-        if (rtl != null) rtl.accept(this);
+		checkAndAccept(o.l);
 		
 		if (o.m.equals(Mbinop.Mdiv)) {
 			this.lastFresh = this.ertlGraph.add(
@@ -95,17 +83,8 @@ public class ToERTL implements RTLVisitor {
 	public void visit(Rmubranch o) {
 		
 		Label myLabel = this.rtlLabel;
-		
-		RTL rtl = this.rtlGraph.graph.get(o.l1);
-		this.rtlLabel = o.l1;
-		visitedLabels.add(o.l1);
-        if (rtl != null) rtl.accept(this);
-
-        RTL rtl2 = this.rtlGraph.graph.get(o.l2);
-		this.rtlLabel = o.l2;
-		visitedLabels.add(o.l2);
-        if (rtl2 != null) rtl2.accept(this);
-		
+		checkAndAccept(o.l1);
+        checkAndAccept(o.l2);
         this.ertlGraph.put(myLabel,
 			new ERmubranch(o.m, o.r, o.l1, o.l2));
 	}
@@ -114,63 +93,50 @@ public class ToERTL implements RTLVisitor {
 	public void visit(Rmbbranch o) {
 		
 		Label myLabel = this.rtlLabel;
-		
-		RTL rtl = this.rtlGraph.graph.get(o.l1);
-		this.rtlLabel = o.l1;
-		visitedLabels.add(o.l1);
-        if (rtl != null) rtl.accept(this);
-        
-		RTL rtl2 = this.rtlGraph.graph.get(o.l2);
-		this.rtlLabel = o.l2;
-		visitedLabels.add(o.l2);
-		Label l2 = o.l2;
-        if (rtl2 != null) rtl2.accept(this);
-        
+		checkAndAccept(o.l1);
+		checkAndAccept(o.l2);
 		this.ertlGraph.put(myLabel,
-			new ERmbbranch(o.m, o.r1, o.r2, o.l1, l2));
+			new ERmbbranch(o.m, o.r1, o.r2, o.l1, o.l2));
 	}
 
 	@Override
 	public void visit(Rcall o) {
 
 		Label myLabel = this.rtlLabel;
-		RTL rtl = this.rtlGraph.graph.get(o.l);
-		this.rtlLabel = o.l;
-		visitedLabels.add(o.l);
-        if (rtl != null) rtl.accept(this);
+		checkAndAccept(o.l);
 		
 		int n_args = o.rl.size();
 		int k = n_args; // k = min(n_args, 6)
 		
-		// 5. If n > 6, pop 8×(n−6) bytes from the stack
-		if (n_args > 6) {
+        // Cheat on lastFresh meaning: force control to be passed to o.l
+        this.lastFresh = o.l;
+        
+        /** 5. If n > 6, pop 8×(n−6) bytes from the stack */
+        if (n_args > 6) {
 			k = 6;
 			Register r1 = new Register();
 			this.lastFresh = this.ertlGraph.add(new ERmbinop(
-                Mbinop.Msub, r1, Register.rsp, o.l));
+                Mbinop.Msub, r1, Register.rsp, this.lastFresh));
 			this.lastFresh = this.ertlGraph.add(
                 new ERconst(8*(n_args-6), r1, this.lastFresh));
-		} else {
-			// If no 5. phase, transfer control to o.l
-			this.lastFresh = o.l;
 		}
 		
-		// 4. Copy %rax in r
+		/** 4. Copy %rax in r */
 		this.lastFresh = this.ertlGraph.add(new ERmbinop(
 			Mbinop.Mmov, Register.rax, o.r, this.lastFresh));
 		
 		if (n_args > 0) {
-			// 3. Call f(k)
+			/** 3. Call f(k) */
 			this.lastFresh = this.ertlGraph.add(
                 new ERcall(o.s, k, this.lastFresh));
 		
-			// 2. If n > 6, pass the other arguments on the stack
+			/** 2. If n > 6, pass the other arguments on the stack */
 			for (int i=n_args-1; i>=6; i--) {
 				this.lastFresh = this.ertlGraph.add(
                     new ERpush_param(o.rl.get(i), this.lastFresh));
 			}
 			
-			// 1. Pass the min(n, 6) arguments inside corresponding register
+			/** 1. Pass the min(n, 6) arguments inside corresponding register */
 			for (int i=k-1; i>=1; i--) {
 				this.lastFresh = this.ertlGraph.add(new ERmbinop(
                     Mbinop.Mmov, o.rl.get(i), 
@@ -189,12 +155,7 @@ public class ToERTL implements RTLVisitor {
 	@Override
 	public void visit(Rgoto o) {
 		Label myLabel = this.rtlLabel;
-		if (!visitedLabels.contains(o.l)) {
-			RTL rtl = this.rtlGraph.graph.get(o.l);
-			this.rtlLabel = o.l;
-			visitedLabels.add(o.l);
-			if (rtl != null) rtl.accept(this);
-		}
+		if (!visitedLabels.contains(o.l)) checkAndAccept(o.l);
 		this.ertlGraph.put(myLabel, new ERgoto(o.l));
 	}
 
@@ -204,14 +165,14 @@ public class ToERTL implements RTLVisitor {
         Set<Register> locals = o.locals;
         LinkedList<Register> callee_saved = new LinkedList<>();
 
-        // 4. Return
+        /** 9. Return */
         this.lastFresh = this.ertlGraph.add(new ERreturn());
         
-        // 3. Free the activation table
+        /** 8. Free the activation table */
         this.lastFresh = this.ertlGraph.add(
             new ERdelete_frame(this.lastFresh));
 
-        // 2. Retreive the callee-saved registers
+        /** 7. Retreive the callee-saved registers */
         for (int i=0; i<Register.callee_saved.size(); i++) {
             Register new_reg = new Register();
             callee_saved.add(new_reg);
@@ -221,18 +182,18 @@ public class ToERTL implements RTLVisitor {
             locals.add(new_reg);
         }
         
-        // 1. Copy the return value into %rax
+        /** 6. Copy the return value into %rax */
         this.ertlGraph.put(o.exit, new ERmbinop(
             Mbinop.Mmov, o.result, Register.rax, this.lastFresh));
         
-        // *** Time for recursion ***
+        /** 5. Time for recursion */
         visitedLabels = new LinkedList<>();
         this.rtlGraph = o.body;
 		RTL rtl = this.rtlGraph.graph.get(o.entry);
 		this.rtlLabel = o.entry;
 		visitedLabels.add(o.entry);
         if (rtl != null) rtl.accept(this);
-        // *** End of recursion ***
+        /** End of recursion */
 
         int n_args = o.formals.size();
         int k = n_args;
@@ -241,27 +202,27 @@ public class ToERTL implements RTLVisitor {
         // Cheat on lastFresh meaning: force control to be passed to o.entry
         this.lastFresh = o.entry;
         
-        // 4. Copy the other parameters into pseudo-registers
+        /** 4. Copy the other parameters into pseudo-registers */
 		for (int i=6; i <= n_args-1; i++) {
 			this.lastFresh = this.ertlGraph.add(new ERget_param(
                 8*(n_args+1-i), o.formals.get(i), this.lastFresh));
 		}
 		
-		// 3. Pass the min(n, 6) parameters into pseudo-register
+		/** 3. Pass the min(n, 6) parameters into pseudo-register */
 		for (int i=k-1; i>=0; i--) {
 			this.lastFresh = this.ertlGraph.add(new ERmbinop(
                 Mbinop.Mmov, Register.parameters.get(i), 
                 o.formals.get(i), this.lastFresh));
 		}
 
-        // 2. Save the callee-saved registers
+        /** 2. Save the callee-saved registers */
         for (int i=0; i<Register.callee_saved.size(); i++) {
 			this.lastFresh = this.ertlGraph.add(new ERmbinop(
                 Mbinop.Mmov, Register.callee_saved.get(i), 
                 callee_saved.get(i), this.lastFresh));
 		}
 
-        // 1. Alloc the activation table with alloc_frame
+        /** 1. Alloc the activation table with alloc_frame */
         this.lastFresh = this.ertlGraph.add(
             new ERalloc_frame(this.lastFresh));
         

@@ -74,9 +74,7 @@ class ToRTL implements Visitor {
 	@Override
 	public void visit(Eaccess_local n) {
 		Register r1 = this.var2regs.get(n.i);
-		if (r1 == null) {
-			r1 = this.arg2regs.get(n.i);
-		}
+		if (r1 == null) r1 = this.arg2regs.get(n.i);
 		this.lastFresh = this.rtlGraph.add(
             new Rmbinop(Mbinop.Mmov, r1, this.r, this.lastFresh));
 	}
@@ -120,26 +118,23 @@ class ToRTL implements Visitor {
 		switch (n.u) {
         case Uneg:
             
-            /**
-             *We create a node "L1: sub r1 r2" (L1 and r1 fresh), and r2 
-             * given recursively by the previous visitor.
-             * Then we create another node to put "L2: mov $0 r2" (L2 fresh)
-             * Finally we recursively process the n.e expression with 
-             * references to r1 and L2 (stored in this.r and this.lastFresh)
-             */
             Register r1 = new Register();
-            Register r2 = this.r;
-            this.lastFresh = this.rtlGraph.add(
-                new Rmbinop(Mbinop.Msub, r1, r2, this.lastFresh)); 
-            // the returned label is now L1. Stored in this.lastFresh
             
-            this.lastFresh = this.rtlGraph.add(new Rconst(0, r2, this.lastFresh)); 
-            // the returned label is now L2
+            /** 3. We compute this.r - r1 */
+            this.lastFresh = this.rtlGraph.add(
+                new Rmbinop(Mbinop.Msub, r1, this.r, this.lastFresh));
+            
+            /** 2. We store $0 inside this.r (an unused register) */
+            this.lastFresh = this.rtlGraph.add(
+                new Rconst(0, this.r, this.lastFresh));
+            
+            /** 1. We store the result of n.e inside r1 */
             this.r = r1;
             n.e.accept(this);
             break;
         
-        case Unot:		
+        case Unot:
+            /** if 0 then 1 else 0 */
             this.lastFresh = this.rtlGraph.add(
                 new Rmunop(new Msetei(0), this.r, this.lastFresh));
             n.e.accept(this);
@@ -183,7 +178,7 @@ class ToRTL implements Visitor {
 			this.r = r2;
 			n.e1.accept(this);
         }
-        // Band, Bor
+        // Band, Bor (lazy)
 		else {
 			Label l_true = this.rtlGraph.add(
                 new Rconst(c, this.r, this.lastFresh));

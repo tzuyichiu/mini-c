@@ -386,6 +386,7 @@ class Decl_fun {
 
 // program = list of functions
 class File {
+	String name;
 	public LinkedList<Decl_fun> funs;
 
 	File(LinkedList<Decl_fun> funs) {

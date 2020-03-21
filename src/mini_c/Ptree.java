@@ -21,7 +21,12 @@ class Loc {
 
     @Override
     public String toString() {
-        return "line " + line + ", column " + column;
+    	if (line < 0 || column < 0) {
+    		return "";
+    	}
+    	else {    		
+    		return "line " + line + ", column " + column;
+    	}
     }
 }
 
@@ -39,6 +44,7 @@ class Pstring {
 }
 
 class Pfile {
+	String name;
 	LinkedList<Pdecl> l;
 
 	public Pfile(LinkedList<Pdecl> l) {
@@ -111,7 +117,11 @@ abstract class Ptype {
 class PTint extends Ptype {
 	void accept(Pvisitor v) {
 		v.visit(this);
-	}	
+	}
+	@Override
+	public String toString() {
+		return "int";
+	}
 }
 
 class PTstruct extends Ptype {
@@ -125,6 +135,10 @@ class PTstruct extends Ptype {
 	}
 	void accept(Pvisitor v) {
 		v.visit(this);
+	}
+	@Override
+	public String toString() {
+		return "struct";
 	}
 }
 

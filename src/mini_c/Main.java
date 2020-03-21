@@ -64,6 +64,7 @@ public class Main {
             Lexer lexer = new Lexer(reader);
             MyParser parser = new MyParser(lexer);
             Pfile f = (Pfile) parser.parse().value;
+            f.name = file;
             if (parse_only) System.exit(0);
             Typing typer = new Typing();
             typer.visit(f);

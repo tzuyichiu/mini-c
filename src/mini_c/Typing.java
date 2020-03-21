@@ -7,6 +7,7 @@ public class Typing implements Pvisitor {
 
 	// the typing result will be stored inside this variable
 	private File file;
+	private String filename;
     private Typ typ = new Ttypenull(); // any Expr is decorated with a type
     private Typ return_typ; // for statements
 	private Stmt stmt;
@@ -22,9 +23,16 @@ public class Typing implements Pvisitor {
 		return this.file;
 	}
 	
+	private void reportError(Loc loc, String message) {
+		System.err.println("File \""+this.filename+"\", "+ loc.toString() + ":\n" + message);
+        System.exit(1);
+	}
+	
 	@Override
 	public void visit(Pfile n) {
 		// Implement prototype functions: sbrk and putchar
+		
+		this.filename = n.name;
         
         // sbrk
         LinkedList<Decl_var> lsbrk = new LinkedList<>();
@@ -42,6 +50,7 @@ public class Typing implements Pvisitor {
 		}
         
         this.file = new File(this.l_decl_fun);
+        this.file.name = n.name;
 	}
 
 	@Override
@@ -78,7 +87,7 @@ public class Typing implements Pvisitor {
         	}
         }       	
         if (index < 0)
-            throw new Error(n.loc.toString() + ": unknown variable: " + n.id);
+        	this.reportError(n.loc, "unknown variable: " + n.id);
         
         vars.get(index).get(n.id).typ.accept(this);
 
@@ -91,8 +100,7 @@ public class Typing implements Pvisitor {
         
         n.e1.accept(this);
         if (n.op == Unop.Uneg && !this.expr.typ.equals(new Tint())) {
-            throw new Error(n.loc.toString() + ": unsupported operation: " + 
-                "!" + this.expr.typ.toString());
+            this.reportError(n.loc, "unsupported operation: " + "!" + this.expr.typ.toString());
         }
         this.expr = new Eunop(n.op, this.expr);
         this.expr.typ = new Tint();
@@ -107,7 +115,7 @@ public class Typing implements Pvisitor {
         Expr e2 = this.expr;
         
         if (!e1.typ.equals(e2.typ)) {
-            throw new Error(n.loc.toString() + ": unsupported operation: " + 
+        	this.reportError(n.loc, "unsupported operation: " + 
                 e1.typ.toString() + " = " + e2.typ.toString());
         }
 
@@ -151,7 +159,7 @@ public class Typing implements Pvisitor {
         if ((c == 0 && !e1.typ.equals(e2.typ)) || 
             (c == 1 && !(e1.typ.equals(t_int) && e2.typ.equals(t_int))))
         {    
-            throw new Error(n.loc.toString() + ": unsupported operation: " + 
+            this.reportError(n.loc, "unsupported operation: " + 
                 e1.typ.toString() + s_op + e2.typ.toString());
         }
         
@@ -166,12 +174,12 @@ public class Typing implements Pvisitor {
         Expr e = this.expr;
         
         if (!e.typ.equals(new Tvoidstar())) {
-            throw new Error(n.loc.toString() + ": unsupported operation: " + 
+        	this.reportError(n.loc, "unsupported operation: " + 
                 e.typ.toString() + " -> " + n.f);
         }
         Structure s = ((Tstructp) e.typ).s;
         if (!s.fields.containsKey(n.f)) {
-            throw new Error(n.loc.toString() + ": " + s.toString() + 
+            this.reportError(n.loc, s.toString() + 
                 " doesn't contain field " + n.f);
         }
         
@@ -185,13 +193,12 @@ public class Typing implements Pvisitor {
 	public void visit(Pcall n) {
 		
         if (!this.fun_prototypes.containsKey(n.f)) {
-            throw new Error(n.loc.toString() + ": function " + 
+        	this.reportError(n.loc, "function " + 
                 n.f + " not declared");
         }
         Decl_fun df = this.fun_prototypes.get(n.f);
         if (n.l.size() != df.fun_formals.size()) {
-            throw new Error(n.loc.toString() + 
-                ": wrong number of arguments: " + n.l.size() + " given, " +
+            this.reportError(n.loc, "wrong number of arguments: " + n.l.size() + " given, " +
                 df.fun_formals.size() + " expected");
         }
         
@@ -204,8 +211,7 @@ public class Typing implements Pvisitor {
             Typ t2 = df.fun_formals.get(i).t;
             
             if (!t1.equals(t2)) {
-                throw new Error(n.loc.toString() + 
-                    ": argument " + (i+1) + ": " + 
+                this.reportError(n.loc, "argument " + (i+1) + ": " + 
                     t1.toString() + " given, " + t2.toString() + " expected");
             }
         }
@@ -218,7 +224,7 @@ public class Typing implements Pvisitor {
 	public void visit(Psizeof n) {
 		
         if (!this.structs.containsKey(n.id)) {
-            throw new Error(n.loc.toString() + ": " + n.id + " undeclared");
+            this.reportError(n.loc, n.id + " undeclared");
         }
     
         this.expr = new Esizeof(this.structs.get(n.id));
@@ -271,8 +277,7 @@ public class Typing implements Pvisitor {
         for (Pdeclvar dv: n.vl) {
             
         	if (this.vars.get(this.vars.size()-1).containsKey(dv.id)) {
-                throw new Error(dv.loc.toString() + 
-                                ": redefinition of variable: " + dv.id);
+                this.reportError(dv.loc, "redefinition of variable: " + dv.id);
         	}
         	
         	dv.typ.accept(this);
@@ -297,7 +302,7 @@ public class Typing implements Pvisitor {
         this.stmt = new Sreturn(this.expr);
 
         if (!this.return_typ.equals(this.expr.typ)) {
-            throw new Error(n.loc.toString() + ": wrong return type: " +
+            this.reportError(n.loc, "wrong return type: " +
                 this.expr.typ.toString() + " given, " + 
                 this.return_typ.toString() + " expected");
         }
@@ -307,7 +312,7 @@ public class Typing implements Pvisitor {
 	public void visit(Pstruct n) {
     
         if (this.structs.containsKey(n.s)) {
-            throw new Error("redefinition of struct: " + n.s);
+            this.reportError(new Loc(-1,-1), "redefinition of struct: " + n.s);
         }
         
         Structure s = new Structure(n.s);
@@ -315,7 +320,7 @@ public class Typing implements Pvisitor {
         int offset = 0;
         for (Pdeclvar dv: n.fl) {
             if (s.fields.containsKey(dv.id)) {
-                throw new Error("redefinition of field " + dv.id + 
+            	this.reportError(new Loc(-1,-1), "redefinition of field " + dv.id + 
                                 " inside struct " + n.s);
             }
             dv.typ.accept(this);
@@ -333,7 +338,7 @@ public class Typing implements Pvisitor {
         String fun_name = n.s;
         
         if (this.fun_prototypes.containsKey(fun_name)) {
-            throw new Error("redefinition of function: " + fun_name);
+        	this.reportError(new Loc(-1,-1), "redefinition of function: " + fun_name);
         }
         
         LinkedList<Decl_var> fun_formals = new LinkedList<>();
@@ -349,7 +354,7 @@ public class Typing implements Pvisitor {
         for (Pdeclvar dv: n.pl) {
             
         	if (this.vars.get(this.vars.size()-1).containsKey(dv.id)) {
-                throw new Error("redefinition of variable " + dv.id + 
+        		this.reportError(new Loc(-1,-1), "redefinition of variable " + dv.id + 
                         " inside function " + fun_name);
             }
          
@@ -361,7 +366,7 @@ public class Typing implements Pvisitor {
         n.b.accept(this);
         
         if (!this.returnSeen) 
-            System.out.println("Warning: Non-void function must return "
+            System.out.println("In function "+fun_name+": Non-void function should return "
                 + n.ty);
         
 		d_fun.fun_body = this.stmt;

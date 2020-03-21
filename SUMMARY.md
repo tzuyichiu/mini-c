@@ -102,10 +102,10 @@ order to construct a corresponding `ERTLGraph`, we simply start from the entry
 label of the `RTLGraph`, keep the same label name, transform every RTL 
 instruction into one or more ERTL instructions, and recursively visit the next 
 label(s). The use of `this.rtlLabel` allows every visitor to know from which 
-label it has been called, and construct the corresponding ERTL instruction with 
-the same label name. 
+label it has been called, and possibly construct the corresponding ERTL instruction 
+with the same label name, or choose another label in some cases.
 
-The subtile point here is that when we are producing multiple ERTL 
+The subtle point here is that when we are producing multiple ERTL 
 instructions from only one RTL instruction, fresh labels have to be created. 
 Similar to the construction of `RTLGraph`, these new instructions have to be 
 created in the reverse order.
@@ -120,11 +120,47 @@ that records every visited Labels.
 
 ### Overview
 
-**TODO**
+Given an `ERTLGraph`, the two main differences with a X86-64 assembly code are
+that there are still non-physical register left in the graph and that the control
+flow is non-linear (there still exists control branches in conditions while the
+x86-64 assembly code is supposed to be linear). The translation from `ERTL` to
+`LTL` is going to act on the first point : find an explicit register for every
+pseudo-register left in the graph, i.e. perform *register allocation*.
+
+The register allocation is divided in three steps : 
+
+ - determine the *liveness* of registers along the control graph, that is, find 
+ 	which registers are alive, dead, used or produced when the control flows 
+ 	through an instruction block.
+
+ - determine the *interference* and *preference* of pseudo-registers which value
+ 	can or cannot be carried by the same physical register. These are built upon
+ 	the previous linevess analysis.
+ 	
+ - perform the *coloring* of the register graph, that is, give every register 
+ 	(physical or abstract) a color (a corresponding physical register) such that
+ 	in the interference graph no pair of interfering registers are given the
+ 	same color. If the set of colors is too small, spill registers on the stack.
+ 	
+The `ERTL` to `LTL` translation is then straightforward : we implemented an
+`ERTLvisitor` called `ToLTL` performing the graph coloring of a given `ERTLgraph`,
+then visiting it and replacing pseudo-registers with their color.
 
 ### Implementation and difficulties
 
-**TODO**
+Special care was required for `ERload`, `ERstore`, `ERget_param` and `ERpush_param` 
+because a direct translation cannot be performed : too many spilled registers make 
+the instruction require too many simultaneous access to memory, so we have to use
+a temporary register (or two for `ERstore`).
+
+In the `ERmbinop` case :
+
+ - if we have a `mov x x` instruction, simplify it into a `goto` instruction
+ - if we have a division with arguments `x` and `y`, make sure the second, `y`,
+ 	is not on the stack, otherwise use a temporary register
+ - else the `ERmbinop` is treated like the previous ones with a special case
+ 	when the two arguments are on the stack and a temporary register has to be
+ 	used.
 
 ## LTLGraph to X86-64
 

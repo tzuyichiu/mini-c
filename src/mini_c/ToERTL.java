@@ -13,7 +13,7 @@ public class ToERTL implements RTLVisitor {
     private Label rtlLabel;
     /** for tail-call optimization (limited to recursive functions) */
     private Label exitLabel; // exit label of rtlGraph (to identify tail calls)
-    private Label gotoLabel; // the label in ertlGraph corresponding to goto
+    private LinkedList<Label> gotoLabels; // labels in ertlGraph corresponding to goto
 	
 	ToERTL() {
         this.ertlFile = new ERTLfile();
@@ -144,8 +144,9 @@ public class ToERTL implements RTLVisitor {
                     new ERcall(o.s, k, this.lastFresh));
             }
             else {
-                this.gotoLabel = new Label();
-                this.lastFresh = this.gotoLabel;
+                Label gotoLabel = new Label();
+                this.gotoLabels.add(gotoLabel);
+                this.lastFresh = gotoLabel;
             }
 
             /** 2. If n > 6, pass the other arguments on the stack */
@@ -169,7 +170,7 @@ public class ToERTL implements RTLVisitor {
 			    this.ertlGraph.put(myLabel,
                     new ERcall(o.s, k, this.lastFresh));
             } else {
-                this.gotoLabel = myLabel;
+                this.gotoLabels.add(myLabel);
             }
 		}
 	}
@@ -240,6 +241,11 @@ public class ToERTL implements RTLVisitor {
                 o.formals.get(i), this.lastFresh));
 		}
 
+        /** For tail-call optimization */
+        for (Label gotoLabel: this.gotoLabels) {
+            this.ertlGraph.graph.put(gotoLabel, new ERgoto(this.lastFresh));
+        }
+
         /** 2. Save the callee-saved registers */
         for (int i=0; i<Register.callee_saved.size(); i++) {
 			this.lastFresh = this.ertlGraph.add(new ERmbinop(
@@ -251,9 +257,6 @@ public class ToERTL implements RTLVisitor {
         this.lastFresh = this.ertlGraph.add(
             new ERalloc_frame(this.lastFresh));
         
-        /** For tail-call optimization */
-        this.ertlGraph.graph.put(this.gotoLabel, new ERgoto(this.lastFresh));
-        
         this.ertlFun.body = this.ertlGraph;
         this.ertlFun.locals = locals;
         this.ertlFun.entry = this.lastFresh;
@@ -263,6 +266,7 @@ public class ToERTL implements RTLVisitor {
 	public void visit(RTLfile o) {
 		for (RTLfun fun: o.funs) {
             this.ertlGraph = new ERTLgraph();
+            this.gotoLabels = new LinkedList<>();
             fun.accept(this);
 			this.ertlFile.funs.add(this.ertlFun);
 		}

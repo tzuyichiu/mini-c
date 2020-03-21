@@ -251,12 +251,12 @@ public class ToERTL implements RTLVisitor {
         this.lastFresh = this.ertlGraph.add(
             new ERalloc_frame(this.lastFresh));
         
+        /** For tail-call optimization */
+        this.ertlGraph.graph.put(this.gotoLabel, new ERgoto(this.lastFresh));
+        
         this.ertlFun.body = this.ertlGraph;
         this.ertlFun.locals = locals;
         this.ertlFun.entry = this.lastFresh;
-        
-        /** For tail-call optimization */
-        this.ertlGraph.graph.put(this.gotoLabel, new ERgoto(this.lastFresh));
 	}
 
 	@Override

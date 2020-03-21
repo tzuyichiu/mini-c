@@ -1,14 +1,20 @@
 # Summary of our work
 
 The compilation is seperated into five steps:
-1. Examination of typing errors while constructing an abstract syntax tree
-2. Transformation of the abstract syntax tree into a `RTLGraph` 
-(*RTL: Register Transfer Language*)
-3. Transformation of the `RTLGraph` into a `ERTLGraph` 
-(*ERTL: Explicit Register Transfer Language*)
-4. Transformation of the `ERTLGraph` into a `LTLGraph` 
-(*LTL: Location Transfer Language*)
-5. Transformation of the `LTLGraph` into a real `X86-64` assembly code
+1. Examination of typing errors & contruction of Ttree (Typed tree)
+2. Translation from Ttree into RTLtree 
+    (*RTL: Register Transfer Language*)
+3. Translation from RTLTree into ERTLtree
+    (*ERTL: Explicit Register Transfer Language*)
+4. Translation from ERTLtree into LTLtree
+    (*LTL: Location Transfer Language*)
+5. Translation from LTLtree into real X86-64 assembly code
+
+We have successfully finished the compiler one week before leaving the campus 
+and had all the tests passed. During the covid-19 outbreak, since we are both 
+familiar with `git` which facilitate us to work remotely, we were still able to 
+spare some time to optimize our compiler, especially for the instruction selection and the tail call (limited to self-recursive functions).
+
 
 ## Typing
 
@@ -19,9 +25,8 @@ correctness of every possible typing error for expressions, statements,
 declarations and files. Refer to Mini-C standard definition for the 
 inference rules based on which we decided to throw an error on typing.
 
-After execution, the abstract syntax tree of type `File` defined in `Ttree.java` 
-(after typing) will be constucted from `Pfile` defined in `Ptree.java` 
-(after parsing).
+A Ttree containing expressions, statements and declarations will then be 
+constructed and every expression will be typed.
 
 ### Implementation and difficulties
 
@@ -48,18 +53,20 @@ can look through all layers to find a variable and delete the latest variable
 dictionary while exiting the bloc.
 
 
-## Construction of RTLGraph
+## Construction of RTLtree
 
 ### Overview
 
-After the typing examination done, we try to produce a `RTLGraph` from the 
-previously constructed abstract syntax tree, where two major things are used: 
-pseudo-registers and labels. The pseudo-registers allow us to simulate the 
-storage of variables, the return value and the arguments. The labels indicate 
-where to go after the execution of the actual one. For this, we define a 
-class `ToRTL` which implements the so-called `Visitor` defined in `Ttree.java`, 
-visiting expressions, statements and declarations recursively, and constructs 
-the graph as the visit persues.
+After the typing examination, we try to produce a control-flow graph (CFG)
+`RTLGraph` from the previously constructed typed tree, where two major things are used: pseudo-registers and labels. Particularly, there is no more 
+distinction between expressions and statements. 
+
+The pseudo-registers allow us to simulate the storage of variables, the return 
+value and the arguments, which are meant to be translated into real X86-64 
+registers or stack memory ulteriorly. The labels indicate where to go after the 
+execution of the actual one. For this, we define a class `ToRTL` which 
+implements visitors defined in `Ttree.java`, visiting expressions, statements 
+and declarations recursively, and constructs the graph as the visit persues.
 
 ### Implementation and difficulties
 
@@ -80,10 +87,18 @@ the reverse order, at the moment we want to tell `goto` where to go, the label
 `l1` after `goto` is not yet constructed (i.e. the evaluation of the `Expr`). 
 We then came up with an idea, which is to create a totally independant label `l`
 for `goto`, make the loop direct to it, and finally associate the corresponding 
-RTL when `l1` is ready. And it works!
+RTL when `l1` is ready. And it works! This technic is by the way widely used
+in the following steps.
+
+We also had difficulties translating access/assignment of local variables and 
+structure fields, because it was not evident to compute the offset of the field
+related to the register storing the pointer to the structure. 
+An intelligent way was to decorate `Field` with its offset and `Structure` with its size in their definition, and compute them at the same time as we examine
+the typing errors (cf.`Typing`). Finally the problem got easily resolved. Same
+thing with `sizeof` for structures.
 
 
-## RTLGraph to ERTLGraph
+## RTLtree to ERTLtree
 
 ### Overview
 
@@ -95,6 +110,21 @@ physical regisiters and the manipulation of the stack. The class `ToERTL`
 implements a `RTLVisitor` defined in `RTL.java`, which visits different types
 of RTL instructions.
 
+More precisely, the convention is as follows:
+- the six first parameters are passed into `%rdi`, `%rsi`, `%rdx`, `%rcx`, 
+    `%r8`, `%r9` and the others are put onto stack.
+- the result is always stored in `%rax`.
+- `idivq` suppose the dividend and the result stored in `%rax`.
+- the callee-saved registers are saved by the callee `%rbx`, `%r12`, `%r13`,
+    `%r14`, `%r15`, `%rbp`. In our work, we only suppose `%rbx` and `%r12` are 
+    used.
+
+Moreover, we successfully optimized the compilation of tail calls, though 
+limited to self-recursive functions, by changing these `call` instructions into 
+`goto` instructions, in order not to change the stack memory too often in case 
+there are too many recursive calls, which could easily result into a stack 
+overflow.
+
 ### Implementation and difficulties
 
 Now that we have obtained a skeleton of the final assembly architecture, in 
@@ -102,8 +132,8 @@ order to construct a corresponding `ERTLGraph`, we simply start from the entry
 label of the `RTLGraph`, keep the same label name, transform every RTL 
 instruction into one or more ERTL instructions, and recursively visit the next 
 label(s). The use of `this.rtlLabel` allows every visitor to know from which 
-label it has been called, and possibly construct the corresponding ERTL instruction 
-with the same label name, or choose another label in some cases.
+label it has been called, and possibly construct the corresponding ERTL 
+instruction with the same label name, or choose another label in some cases.
 
 The subtle point here is that when we are producing multiple ERTL 
 instructions from only one RTL instruction, fresh labels have to be created. 
@@ -116,53 +146,72 @@ forgot not to visit a same label twice or more, making the visiting enter an
 infinite loop. We solved this problem by using a table called `visitedLabels` 
 that records every visited Labels.
 
-## ERTLGraph to LTLGraph
+As for the tail-call optimization we've done, it is only limited to 
+self-recursive functions, where the number of arguments is always fixed. The
+implementation includes three parts:
+- determine a call is a recursive tail call
+- replace `call` by `goto`
+- determine where to `goto`
+
+A call is a recursive tail call if and only if the next label is equal to the 
+exit label, and the name of the function has to be itself. Besides, we should 
+not directly `goto` the entry label. Instead, we should `goto` the label where 
+the arguments are passed into registers or stack memories, since we
+should never reallocate the frame. However these labels haven't been computed 
+during the recursion, so we apply the same technic: create new `goto` labels, 
+store them and associate them to the good labels afterwards.
+
+
+## ERTLtree to LTLtree
 
 ### Overview
 
 Given an `ERTLGraph`, the two main differences with a X86-64 assembly code are
-that there are still non-physical register left in the graph and that the control
-flow is non-linear (there still exists control branches in conditions while the
-x86-64 assembly code is supposed to be linear). The translation from `ERTL` to
-`LTL` is going to act on the first point : find an explicit register for every
-pseudo-register left in the graph, i.e. perform *register allocation*.
+that there are still non-physical register left in the graph and that the 
+control flow is non-linear (there still exists control branches in conditions 
+while the `X86-64` assembly code is supposed to be linear). The translation 
+from `ERTL` to `LTL` is going to act on the first point: find an explicit 
+register for every pseudo-register left in the graph, i.e. perform 
+*register allocation*.
 
 The register allocation is divided in three steps : 
 
- - determine the *liveness* of registers along the control graph, that is, find 
- 	which registers are alive, dead, used or produced when the control flows 
+- determine the *liveness* of registers along the control graph, that is, find 
+    which registers are alive, dead, used or produced when the control flows 
  	through an instruction block.
 
- - determine the *interference* and *preference* of pseudo-registers which value
- 	can or cannot be carried by the same physical register. These are built upon
- 	the previous linevess analysis.
+- determine the *interference* and *preference* of pseudo-registers which value
+ 	can or cannot be carried by the same physical register. These are built 
+    upon the previous linevess analysis.
  	
- - perform the *coloring* of the register graph, that is, give every register 
- 	(physical or abstract) a color (a corresponding physical register) such that
- 	in the interference graph no pair of interfering registers are given the
- 	same color. If the set of colors is too small, spill registers on the stack.
+- perform the *coloring* of the register graph, that is, give every register 
+ 	(physical or abstract) a color (a corresponding physical register) such 
+    that in the interference graph no pair of interfering registers are given 
+    the same color. If the set of colors is too small, spill registers on the 
+    stack.
  	
-The `ERTL` to `LTL` translation is then straightforward : we implemented an
-`ERTLvisitor` called `ToLTL` performing the graph coloring of a given `ERTLgraph`,
-then visiting it and replacing pseudo-registers with their color.
+The `ERTL` to `LTL` translation is then straightforward: we implemented an
+`ERTLvisitor` called `ToLTL` performing the graph coloring of a given 
+`ERTLgraph`, visiting it and replacing pseudo-registers with their color.
+
 
 ### Implementation and difficulties
 
-Special care was required for `ERload`, `ERstore`, `ERget_param` and `ERpush_param` 
-because a direct translation cannot be performed : too many spilled registers make 
-the instruction require too many simultaneous access to memory, so we have to use
-a temporary register (or two for `ERstore`).
+Special care was required for `ERload`, `ERstore`, `ERget_param` and 
+`ERpush_param` because a direct translation cannot be performed: too many 
+spilled registers make the instruction require too many simultaneous access to 
+memory, so we have to use a temporary register (or two for `ERstore`).
 
-In the `ERmbinop` case :
-
- - if we have a `mov x x` instruction, simplify it into a `goto` instruction
- - if we have a division with arguments `x` and `y`, make sure the second, `y`,
+In the `ERmbinop` case:
+- If we have a `mov x x` instruction, simplify it into a `goto` instruction
+- If we have a division with arguments `x` and `y`, make sure the second, `y`,
  	is not on the stack, otherwise use a temporary register
- - else the `ERmbinop` is treated like the previous ones with a special case
- 	when the two arguments are on the stack and a temporary register has to be
- 	used.
+- Otherwise the `ERmbinop` is treated like the previous ones with a special 
+    case when the two arguments are on the stack and a temporary register has to 
+    be used.
 
-## LTLGraph to X86-64
+
+## LTLtree to X86-64 assembly code
 
 ### Overview
 
@@ -229,3 +278,6 @@ transfer. As for the division, `cqto` must be used to convert *quad* to *oct*
 for the divisor since `idiv` does a 128/64 bit division. Only the first 
 register needs to be used because it is imposed that `%rax` be used to store 
 the divident (before `idiv`) and the result (after `idiv`).
+
+
+## Additional work (optimization)

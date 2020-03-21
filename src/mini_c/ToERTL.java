@@ -109,7 +109,6 @@ public class ToERTL implements RTLVisitor {
 		
 		Label myLabel = this.RTL_label;
 		Label auxl = null;
-		checkAndAccept(o.l);
 		
 		int n_args = o.rl.size();
 		int k = n_args;
@@ -117,6 +116,8 @@ public class ToERTL implements RTLVisitor {
 		// Optimize tail calls only for functions with less than 6 arguments
 		if (this.rtlgraph.graph.get(o.l) != null || n_args > 6) {
 			// Non-tail call
+			checkAndAccept(o.l);
+			
 			// 5. If n > 6, pop 8×(n−6) bytes from the stack
 			if (n_args > 6) {
 				k = 6;
@@ -165,7 +166,7 @@ public class ToERTL implements RTLVisitor {
 
 			if (n_args > 0) {
 				// Go to function entry point
-				auxl = this.ertlgraph.add(new ERgoto(new Label(o.s)));
+				auxl = this.ertlgraph.add(new ERgoto(new Label("F" + o.s)));
 
 				// Pass exactly n arguments inside corresponding register (n <= 6)
 				for (int i=k-1; i>=1; i--) {
@@ -178,7 +179,7 @@ public class ToERTL implements RTLVisitor {
 						Register.parameters.get(0), auxl));
 			} else {
 				// No arguments, directly go to function entry point
-				this.ertlgraph.put(myLabel, new ERgoto(new Label(o.s)));
+				this.ertlgraph.put(myLabel, new ERgoto(new Label("F" + o.s)));
 			}
 		}
 	}

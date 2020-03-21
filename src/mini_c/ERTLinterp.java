@@ -28,6 +28,7 @@ public class ERTLinterp implements ERTLVisitor {
     for (Register r: f.locals) new_regs.put(r, 0L);
     this.mem.regs = new_regs;
     this.next = f.entry;
+    System.out.println(this.next);
     while (true) {
       ERTL i = f.body.graph.get(this.next);
       if (i == null) throw new Error("no ERTL instruction at label " + this.next);
@@ -143,7 +144,13 @@ public class ERTLinterp implements ERTLVisitor {
 
   @Override
   public void visit(ERgoto o) {
-    this.next = o.l;
+	  //Adapt to tail call optimization
+	  if (o.l.toString().startsWith("L")) {
+		  this.next = o.l;
+	  }
+	  else if (o.l.toString().startsWith("F")) {
+		  this.next = this.funs.get(o.l.toString().substring(1,o.l.toString().length())).entry;
+	  }
   }
 
   @Override

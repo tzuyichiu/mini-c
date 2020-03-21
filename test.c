@@ -1,9 +1,9 @@
+int fact(int acc, int n) {
+    if (n <= 1) return acc;
+    return fact(acc * n, n - 1);
+}
+
 int main() {
-	putchar('W');
-	putchar('o');
-	putchar('r');
-	putchar('k');
-	putchar('s');
-	putchar('?');
-	return 0;
+    putchar(fact(1, 5));
+    return 0;
 }

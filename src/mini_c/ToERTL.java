@@ -11,6 +11,9 @@ public class ToERTL implements RTLVisitor {
 	private LinkedList<Label> visitedLabels;
     private Label lastFresh;
     private Label rtlLabel;
+    /** for tail-call optimization (limited to recursive functions) */
+    private Label exitLabel; // exit label of rtlGraph (to identify tail calls)
+    private Label gotoLabel; // the label in ertlGraph corresponding to goto
 	
 	ToERTL() {
         this.ertlFile = new ERTLfile();
@@ -102,35 +105,50 @@ public class ToERTL implements RTLVisitor {
 	@Override
 	public void visit(Rcall o) {
 
-		Label myLabel = this.rtlLabel;
+        boolean isRecTailCall = 
+            (this.exitLabel == o.l && o.s.equals(this.ertlFun.name));
+        
+        Label myLabel = this.rtlLabel;
 		checkAndAccept(o.l);
 		
 		int n_args = o.rl.size();
-		int k = n_args; // k = min(n_args, 6)
-		
+        int k = n_args; 
+        if (k > 6) k = 6; // k = min(n_args, 6)
+        
         // Cheat on lastFresh meaning: force control to be passed to o.l
         this.lastFresh = o.l;
-        
-        /** 5. If n > 6, pop 8×(n−6) bytes from the stack */
-        if (n_args > 6) {
-			k = 6;
-			Register r1 = new Register();
-			this.lastFresh = this.ertlGraph.add(new ERmbinop(
-                Mbinop.Msub, r1, Register.rsp, this.lastFresh));
-			this.lastFresh = this.ertlGraph.add(
-                new ERconst(8*(n_args-6), r1, this.lastFresh));
-		}
-		
-		/** 4. Copy %rax in r */
-		this.lastFresh = this.ertlGraph.add(new ERmbinop(
-			Mbinop.Mmov, Register.rax, o.r, this.lastFresh));
-		
-		if (n_args > 0) {
-			/** 3. Call f(k) */
-			this.lastFresh = this.ertlGraph.add(
-                new ERcall(o.s, k, this.lastFresh));
-		
-			/** 2. If n > 6, pass the other arguments on the stack */
+
+        if (!isRecTailCall) {
+            /** 5. If n > 6, pop 8×(n−6) bytes from the stack */
+            if (n_args > 6) {
+                Register r1 = new Register();
+                this.lastFresh = this.ertlGraph.add(new ERmbinop(
+                    Mbinop.Msub, r1, Register.rsp, this.lastFresh));
+                this.lastFresh = this.ertlGraph.add(
+                    new ERconst(8*(n_args-6), r1, this.lastFresh));
+            }
+            
+            /** 4. Copy %rax in r */
+            this.lastFresh = this.ertlGraph.add(new ERmbinop(
+                Mbinop.Mmov, Register.rax, o.r, this.lastFresh));
+        }
+
+        if (n_args > 0) {
+            /** 
+             * 3.
+             *  - Call f(k) if not tail call
+             *  - Goto entry point otherwise
+             */
+            if (!isRecTailCall) {
+                this.lastFresh = this.ertlGraph.add(
+                    new ERcall(o.s, k, this.lastFresh));
+            }
+            else {
+                this.gotoLabel = new Label();
+                this.lastFresh = this.gotoLabel;
+            }
+
+            /** 2. If n > 6, pass the other arguments on the stack */
 			for (int i=n_args-1; i>=6; i--) {
 				this.lastFresh = this.ertlGraph.add(
                     new ERpush_param(o.rl.get(i), this.lastFresh));
@@ -145,10 +163,14 @@ public class ToERTL implements RTLVisitor {
 			this.ertlGraph.put(myLabel, new ERmbinop(
                 Mbinop.Mmov, o.rl.get(0), 
                 Register.parameters.get(0), this.lastFresh));
-		} else {
-			// No arguments, tranfert control directly to 3.
-			this.ertlGraph.put(myLabel,
-				new ERcall(o.s, k, this.lastFresh));
+        } 
+        else /** No arguments: transfer control to 3. */ {
+            if (!isRecTailCall) {
+			    this.ertlGraph.put(myLabel,
+                    new ERcall(o.s, k, this.lastFresh));
+            } else {
+                this.gotoLabel = myLabel;
+            }
 		}
 	}
 
@@ -162,6 +184,9 @@ public class ToERTL implements RTLVisitor {
 	@Override
 	public void visit(RTLfun o) {
 
+        this.ertlFun = new ERTLfun(o.name, o.formals.size());
+        this.exitLabel = o.exit;
+        
         Set<Register> locals = o.locals;
         LinkedList<Register> callee_saved = new LinkedList<>();
 
@@ -226,10 +251,12 @@ public class ToERTL implements RTLVisitor {
         this.lastFresh = this.ertlGraph.add(
             new ERalloc_frame(this.lastFresh));
         
-        this.ertlFun = new ERTLfun(o.name, o.formals.size());
         this.ertlFun.body = this.ertlGraph;
         this.ertlFun.locals = locals;
-		this.ertlFun.entry = this.lastFresh;
+        this.ertlFun.entry = this.lastFresh;
+        
+        /** For tail-call optimization */
+        this.ertlGraph.graph.put(this.gotoLabel, new ERgoto(this.lastFresh));
 	}
 
 	@Override

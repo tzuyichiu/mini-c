@@ -163,9 +163,9 @@ class ToRTL implements Visitor {
         case Bor : mub = new Mjnz(); c = 1; break;
 		}
         
-        // not Band, Bor
 		/** 
-		 * |!| Careful here : we want to compute e1 op e2 with r2 <- r2 op r1
+         * Beq, Bneq, Blt, Ble, Bgt, Bge, Badd, Bsub, Bmul, Bdiv
+		 * |!| Careful here: we want to compute e1 op e2 with r2 <- r2 op r1
 		 * so we have to put e1 in r2 and e2 in r1 
 		 */
         if (c == -1) {
@@ -178,7 +178,7 @@ class ToRTL implements Visitor {
 			this.r = r2;
 			n.e1.accept(this);
         }
-        // Band, Bor (lazy)
+        /** Band, Bor (lazy) */
 		else {
 			Label l_true = this.rtlGraph.add(
                 new Rconst(c, this.r, this.lastFresh));

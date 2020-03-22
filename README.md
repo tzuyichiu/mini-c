@@ -8,11 +8,11 @@ the C language whose standard is defined here:
 https://www.enseignement.polytechnique.fr/informatique/INF564/projet/sujet-v1.pdf.
 
 Mini-C contains integers and pointers to structures, and is totally compatible 
-with C. The **MCC** is written in Java, takes a Mini-C program (`.c`) in input 
-and compiles it to X86-64 text assembly file (`.s`) that can then be translated 
-to binary (using GCC for instance).
+with C. Written in Java, **MCC** takes a Mini-C program (`.c`) in input 
+and compiles it to an X86-64 text assembly file (`.s`). This file can then be 
+translated to binary by using GCC for instance.
 
-### Usage
+## Usage
 
 Once inside the root directory, execute `make` to *compile (!)* this compiler. 
 The **MCC** binary you get as a result can be run by making use of `mini-c` in
@@ -40,7 +40,7 @@ To compile directly a Mini-C program to a binary, run:
 which will produce the binary `./myprogram` of your Mini-C program.
 
 
-### Running tests
+## Running tests
 
 The following `make` targets were defined in order to test our compiler by 
 executing `Main.java` with the debug mode:
@@ -75,3 +75,7 @@ cd tests
 > ./run -i "../mini-c --interp-ertl" # To test ERTL
 > ./run -3 ../mini-c                 # To test the X86-64 compilation
 ```
+
+## More details
+
+More details can be found in `SUMMARY.md` about our work.

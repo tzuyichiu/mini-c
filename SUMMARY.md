@@ -13,7 +13,8 @@ The compilation is seperated into five steps:
 We have successfully finished the compiler one week before leaving the campus 
 and had all the tests passed. During the covid-19 outbreak, since we are both 
 familiar with `git` which facilitate us to work remotely, we were still able to 
-spare some time to optimize our compiler, especially for the instruction selection and the tail call (limited to self-recursive functions).
+spare some time to optimize our compiler for the tail calls limited to 
+recursive functions.
 
 
 ## Typing
@@ -58,7 +59,8 @@ dictionary while exiting the bloc.
 ### Overview
 
 After the typing examination, we try to produce a control-flow graph (CFG)
-`RTLGraph` from the previously constructed typed tree, where two major things are used: pseudo-registers and labels. Particularly, there is no more 
+`RTLGraph` from the previously constructed typed tree, where two major things 
+are used: pseudo-registers and labels. Particularly, there is no more 
 distinction between expressions and statements. 
 
 The pseudo-registers allow us to simulate the storage of variables, the return 
@@ -93,7 +95,8 @@ in the following steps.
 We also had difficulties translating access/assignment of local variables and 
 structure fields, because it was not evident to compute the offset of the field
 related to the register storing the pointer to the structure. 
-An intelligent way was to decorate `Field` with its offset and `Structure` with its size in their definition, and compute them at the same time as we examine
+An intelligent way was to decorate `Field` with its offset and `Structure` with 
+its size in their definition, and compute them at the same time as we examine
 the typing errors (cf.`Typing`). Finally the problem got easily resolved. Same
 thing with `sizeof` for structures.
 
@@ -111,19 +114,13 @@ implements a `RTLVisitor` defined in `RTL.java`, which visits different types
 of RTL instructions.
 
 More precisely, the convention is as follows:
-- the six first parameters are passed into `%rdi`, `%rsi`, `%rdx`, `%rcx`, 
+- The six first parameters are passed into `%rdi`, `%rsi`, `%rdx`, `%rcx`, 
     `%r8`, `%r9` and the others are put onto stack.
-- the result is always stored in `%rax`.
+- The result is always stored in `%rax`.
 - `idivq` suppose the dividend and the result stored in `%rax`.
-- the callee-saved registers are saved by the callee `%rbx`, `%r12`, `%r13`,
+- The callee-saved registers are saved by the callee `%rbx`, `%r12`, `%r13`,
     `%r14`, `%r15`, `%rbp`. In our work, we only suppose `%rbx` and `%r12` are 
     used.
-
-Moreover, we successfully optimized the compilation of tail calls, though 
-limited to self-recursive functions, by changing these `call` instructions into 
-`goto` instructions, in order not to change the stack memory too often in case 
-there are too many recursive calls, which could easily result into a stack 
-overflow.
 
 ### Implementation and difficulties
 
@@ -145,21 +142,6 @@ We also encountered another difficulty when translating the instruction
 forgot not to visit a same label twice or more, making the visiting enter an
 infinite loop. We solved this problem by using a table called `visitedLabels` 
 that records every visited Labels.
-
-As for the tail-call optimization we've done, it is only limited to 
-self-recursive functions, where the number of arguments is always fixed. The
-implementation includes three parts:
-- determine a call is a recursive tail call
-- replace `call` by `goto`
-- determine where to `goto`
-
-A call is a recursive tail call if and only if the next label is equal to the 
-exit label, and the name of the function has to be itself. Besides, we should 
-not directly `goto` the entry label. Instead, we should `goto` the label where 
-the arguments are passed into registers or stack memories, since we
-should never reallocate the frame. However these labels haven't been computed 
-during the recursion, so we apply the same technic: create new `goto` labels, 
-store them and associate them to the good labels afterwards.
 
 
 ## ERTLtree to LTLtree
@@ -207,8 +189,8 @@ In the `ERmbinop` case:
 - If we have a division with arguments `x` and `y`, make sure the second, `y`,
  	is not on the stack, otherwise use a temporary register
 - Otherwise the `ERmbinop` is treated like the previous ones with a special 
-    case when the two arguments are on the stack and a temporary register has to 
-    be used.
+    case when the two arguments are on the stack and a temporary register has 
+    to be used.
 
 
 ## LTLtree to X86-64 assembly code
@@ -232,9 +214,9 @@ we make use of a set storing labels that are needed. Also, as in the previous
 work, we make use of a set storing the labels already visited, in order to 
 translate the same LTL code only once.
 
-A function called `lin` deals with a label by calling and updating the two sets,
-while interacting mutually and recursively with the visitors, whose work is 
-to translate the corresponding LTL code. If a label hasn't been treated, the 
+A function called `lin` deals with a label by calling and updating the two 
+sets, while interacting mutually and recursively with the visitors, whose work 
+is to translate the corresponding LTL code. If a label hasn't been treated, the 
 function marks it as visited and calls the visitor correponding to its 
 instruction. Otherwise, this label is being reused, so it is needed inside the
 final assembly code, and the function produces a `jmp` instruction to this 
@@ -242,7 +224,7 @@ label.
 
 As for the visitors, of course we call the function `lin` at the end in order 
 to treat recursively the next label(s). The major difficulties we encountered 
-lie in three parts:
+lie in four parts:
 - linearization of branches
 - recognition of labels that will be needed
 - flag settings before applying instructions with condition code (cc)
@@ -281,3 +263,26 @@ the divident (before `idiv`) and the result (after `idiv`).
 
 
 ## Additional work (optimization)
+
+During the translation from RTLtree into ERTLtree, we successfully optimized 
+the compilation of tail calls, though limited to recursive functions, by 
+changing these `call` instructions into `goto` instructions, in order not to 
+change the stack memory too often in case there are too many recursive calls, 
+which could easily result into a stack overflow. (cf. `ToERTL.java`)
+
+The tail-call optimization we've done is only limited to recursive functions, 
+because the number of arguments is always fixed, which simplifies the work a 
+lot. The implementation includes three parts:
+- determine a call is a recursive tail call
+- replace `call` by `goto`
+- determine where to `goto`
+
+A call is a recursive tail call if and only if the next label is equal to the 
+exit label, and the name of the function has to be itself. Besides, we should 
+not directly `goto` the entry label. Instead, we should `goto` the label where 
+the arguments are passed into registers or stack memories, since we
+should never reallocate the frame. However these labels haven't been computed 
+during the recursion, so we apply the same technic: create new `goto` labels, 
+store them and associate them to the good labels afterwards.
+
+The optimization works pretty well, with all the tests passed.

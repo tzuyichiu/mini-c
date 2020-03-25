@@ -1,7 +1,7 @@
 # Summary of our work
 
-The compilation is seperated into five steps:
-1. Examination of typing errors & contruction of Ttree (Typed tree)
+The compilation is separated into five steps:
+1. Examination of typing errors and construction of Ttree (Typed tree)
 2. Translation from Ttree into RTLtree 
     (*RTL: Register Transfer Language*)
 3. Translation from RTLTree into ERTLtree
@@ -40,7 +40,7 @@ previous visitors. If some error occurs, `v` throws an error message,
 otherwise, it updates the global variables in its turn.
 
 The method `Typ.equals(Typ)` was added in order to simplify syntax 
-for type verifications.
+for type verification.
 
 By the way, we also encountered some difficulties while working with variables
 inside different layers of blocs. Instead of only considering a dictionary 
@@ -65,39 +65,41 @@ distinction between expressions and statements.
 
 The pseudo-registers allow us to simulate the storage of variables, the return 
 value and the arguments, which are meant to be translated into real X86-64 
-registers or stack memory ulteriorly. The labels indicate where to go after the 
+registers or stack memory later. The labels indicate where to go after the 
 execution of the actual one. For this, we define a class `ToRTL` which 
 implements visitors defined in `Ttree.java`, visiting expressions, statements 
-and declarations recursively, and constructs the graph as the visit persues.
+and declarations recursively, and constructs the graph as the visit goes on.
 
 ### Implementation and difficulties
 
 To construct a `RTLGraph`, we have to start from the last statement. One of the
-difficulties we encountered consists in not noticing that we have to call 
+difficulties we faced came from not noticing that we have to call 
 visitors in the reverse order.
 
 After reversing the visiting order, we could update global variables 
 `this.lastFresh` (corresponding to the new created label) and `this.r` (the 
 register where the result should be stored) before calling the next visitor 
 recursively. In this way, the next node that we construct (by calling the 
-corresponding visitor) will be able to access to this label (to which it should 
-be directed) and store the result to the register.
+corresponding visitor) will be able to access this label (to which control flow 
+should be directed) and store the result to the register. The global result is 
+that to follow the control flow in the control flow graph, one has to read
+visitors' code from bottom to top.
 
 The graph structure becomes more complicated when it comes to `while`. When 
 implementing `goto` (at the end of the loop), since the graph is constructed in 
 the reverse order, at the moment we want to tell `goto` where to go, the label 
 `l1` after `goto` is not yet constructed (i.e. the evaluation of the `Expr`). 
-We then came up with an idea, which is to create a totally independant label `l`
+We then came up with an idea, which is to create a totally independent label `l`
 for `goto`, make the loop direct to it, and finally associate the corresponding 
-RTL when `l1` is ready. And it works! This technic is by the way widely used
+RTL when `l1` is ready. And it works! This method will be widely used
 in the following steps.
 
 We also had difficulties translating access/assignment of local variables and 
 structure fields, because it was not evident to compute the offset of the field
 related to the register storing the pointer to the structure. 
-An intelligent way was to decorate `Field` with its offset and `Structure` with 
+A convenient way was to decorate `Field` with its offset and `Structure` with 
 its size in their definition, and compute them at the same time as we examine
-the typing errors (cf.`Typing`). Finally the problem got easily resolved. Same
+the typing errors (cf.`Typing`). Finally the problem was solved easily. Same
 thing with `sizeof` for structures.
 
 
@@ -105,11 +107,12 @@ thing with `sizeof` for structures.
 
 ### Overview
 
-In the previously constructed `RTLGraph`, we only made use of pseudo-registers,
-but in order to explicitly decide which registers and at which position on the
-stack to store variables, arguments and results, we transform every RTL 
+In the previously constructed `RTLGraph`, we only made use of pseudo-registers.
+As some instructions require specific physical registers or stack locations
+to be used, the next step is to explicitly translate theses required conditions
+in order to shrink the set of pseudo-registers. We transform every RTL 
 instruction into one or more ERTL instructions where we specify the use of 
-physical regisiters and the manipulation of the stack. The class `ToERTL`
+physical registers and the manipulation of the stack. The class `ToERTL`
 implements a `RTLVisitor` defined in `RTL.java`, which visits different types
 of RTL instructions.
 
@@ -164,7 +167,7 @@ The register allocation is divided in three steps :
 
 - determine the *interference* and *preference* of pseudo-registers which value
  	can or cannot be carried by the same physical register. These are built 
-    upon the previous linevess analysis.
+    upon the previous liveness analysis.
  	
 - perform the *coloring* of the register graph, that is, give every register 
  	(physical or abstract) a color (a corresponding physical register) such 
@@ -197,9 +200,9 @@ In the `ERmbinop` case:
 
 ### Overview
 
-Now that every pseudo-register has been tranformed into physical registers or 
-stack memory, the remaining work is to linearize the graph, and transform every 
-LTL code into real assembly instructions. The work is done in the file 
+Now that every pseudo-register has been transformed into physical registers or 
+stack memory, the remaining work is to make the control flow linear, and transform 
+every LTL code into real assembly instructions. The work is done in the file 
 `ToX86_64.java` which implements a `LTLVisitor` defined in `LTL.java`, visiting 
 the previously constructed `LTLGraph`.
 
@@ -217,7 +220,7 @@ translate the same LTL code only once.
 A function called `lin` deals with a label by calling and updating the two 
 sets, while interacting mutually and recursively with the visitors, whose work 
 is to translate the corresponding LTL code. If a label hasn't been treated, the 
-function marks it as visited and calls the visitor correponding to its 
+function marks it as visited and calls the visitor corresponding to its 
 instruction. Otherwise, this label is being reused, so it is needed inside the
 final assembly code, and the function produces a `jmp` instruction to this 
 label.
@@ -259,7 +262,7 @@ of "spilled" memory address, so we make use of a temporary register to do the
 transfer. As for the division, `cqto` must be used to convert *quad* to *oct* 
 for the divisor since `idiv` does a 128/64 bit division. Only the first 
 register needs to be used because it is imposed that `%rax` be used to store 
-the divident (before `idiv`) and the result (after `idiv`).
+the dividend (before `idiv`) and the result (after `idiv`).
 
 
 ## Additional work (optimization)

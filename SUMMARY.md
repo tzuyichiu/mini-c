@@ -109,7 +109,7 @@ thing with `sizeof` for structures.
 
 In the previously constructed `RTLGraph`, we only made use of pseudo-registers.
 As some instructions require specific physical registers or stack locations
-to be used, the next step is to explicitly translate theses required conditions
+to be used, the next step is to explicitly translate the latter
 in order to shrink the set of pseudo-registers. We transform every RTL 
 instruction into one or more ERTL instructions where we specify the use of 
 physical registers and the manipulation of the stack. The class `ToERTL`
@@ -142,7 +142,7 @@ created in the reverse order.
 
 We also encountered another difficulty when translating the instruction
 `Rgoto`. While testing with Mini-C programs that contain a *while* loop, we 
-forgot not to visit a same label twice or more, making the visiting enter an
+forgot not to visit a same label twice or more, so the visitor got stuck in an
 infinite loop. We solved this problem by using a table called `visitedLabels` 
 that records every visited Labels.
 
@@ -152,7 +152,7 @@ that records every visited Labels.
 ### Overview
 
 Given an `ERTLGraph`, the two main differences with a X86-64 assembly code are
-that there are still non-physical register left in the graph and that the 
+that there are still non-physical registers left in the graph and that the 
 control flow is non-linear (there still exists control branches in conditions 
 while the `X86-64` assembly code is supposed to be linear). The translation 
 from `ERTL` to `LTL` is going to act on the first point: find an explicit 
@@ -165,9 +165,10 @@ The register allocation is divided in three steps :
     which registers are alive, dead, used or produced when the control flows 
  	through an instruction block.
 
-- determine the *interference* and *preference* of pseudo-registers which value
- 	can or cannot be carried by the same physical register. These are built 
-    upon the previous liveness analysis.
+- determine the *interference* and *preference* relations between pseudo-registers, 
+	that is, determine when a value can be carried by the same physical register 
+	(whether real or on the stack). These relations are built upon the previous 
+	liveness analysis.
  	
 - perform the *coloring* of the register graph, that is, give every register 
  	(physical or abstract) a color (a corresponding physical register) such 
@@ -211,11 +212,11 @@ the previously constructed `LTLGraph`.
 Notice that the instructions that are not reused by any other instruction 
 will not need to be labeled. Also, the fact that we translated 
 `mov r1 r2 -> L` into `goto -> L` when `r1` and `r2` have the same color made 
-the final LTL code filled with lots of `goto` which we can eliminate. It means
+the final LTL code filled with lots of `goto` which we can wipe out. It means
 that a great part of LTL code isn't needed inside the final assembly code, so 
 we make use of a set storing labels that are needed. Also, as in the previous
 work, we make use of a set storing the labels already visited, in order to 
-translate the same LTL code only once.
+avoid infinite visitation loops.
 
 A function called `lin` deals with a label by calling and updating the two 
 sets, while interacting mutually and recursively with the visitors, whose work 
@@ -241,10 +242,10 @@ have already been visited, we have no choice but to produce a `jmp` instruction
 for the negative label.
 
 Secondly, at the beginning we forgot to mark some of the labels as needed, so 
-they didn't appear in the final assembly code, which thus resulted errors for 
-undefined reference during the interpretation. We finally came out with the 
-conclusion of two sufficient and necessary conditions that a label will be 
-needed:
+they didn't appear in the final assembly code : this led to errors for 
+undefined references during the interpretation. We finally came out with the 
+conclusion of two sufficient and necessary conditions for a label to be 
+needed, which give the two sets:
 - every label to which a `jmp` is performed
 - the label visited later during branching, when both branching labels haven't 
 been visited
@@ -261,7 +262,7 @@ Finally, as for the multiplication, the destination must be a register instead
 of "spilled" memory address, so we make use of a temporary register to do the 
 transfer. As for the division, `cqto` must be used to convert *quad* to *oct* 
 for the divisor since `idiv` does a 128/64 bit division. Only the first 
-register needs to be used because it is imposed that `%rax` be used to store 
+register needs to be used because it is imposed that `%rax` is used to store 
 the dividend (before `idiv`) and the result (after `idiv`).
 
 
@@ -285,7 +286,7 @@ exit label, and the name of the function has to be itself. Besides, we should
 not directly `goto` the entry label. Instead, we should `goto` the label where 
 the arguments are passed into registers or stack memories, since we
 should never reallocate the frame. However these labels haven't been computed 
-during the recursion, so we apply the same technic: create new `goto` labels, 
+during the recursion, so we apply the same method: create new `goto` labels, 
 store them and associate them to the good labels afterwards.
 
 The optimization works pretty well, with all the tests passed.

@@ -12,6 +12,8 @@ with C. Written in Java, **MCC** takes a Mini-C program (`.c`) in input
 and compiles it to an X86-64 text assembly file (`.s`). This file can then be 
 translated to binary by using GCC for instance.
 
+**Authors: Bastien SCHNITZLER, Tzu-yi CHIU (Ecole Polytechnique Promotion X2017)**
+
 ## Usage
 
 Once inside the root directory, execute `make` to *compile (!)* this compiler. 

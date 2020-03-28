@@ -1,10 +1,14 @@
+# Authors
+
+**Bastien SCHNITZLER, Tzu-yi CHIU (Ecole Polytechnique Promotion X2017)**
+
 # Summary of our work
 
 The compilation is separated into five steps:
 1. Examination of typing errors and construction of Ttree (Typed tree)
 2. Translation from Ttree into RTLtree 
     (*RTL: Register Transfer Language*)
-3. Translation from RTLTree into ERTLtree
+3. Translation from RTLtree into ERTLtree
     (*ERTL: Explicit Register Transfer Language*)
 4. Translation from ERTLtree into LTLtree
     (*LTL: Location Transfer Language*)
@@ -12,10 +16,13 @@ The compilation is separated into five steps:
 
 We have successfully finished the compiler one week before leaving the campus 
 and had all the tests passed. During the covid-19 outbreak, since we are both 
-familiar with `git` which facilitate us to work remotely, we were still able to 
-spare some time to optimize our compiler for the tail calls limited to 
-recursive functions.
+familiar with `git` which facilitates us to work remotely, we were still able 
+to spare some time to optimize our compiler for the tail calls (though limited 
+to recursive functions).
 
+We also made a simple `Makefile` which facilitates the compilation of the 
+project, including different target options that allow to run test files at 
+every step. (cf. **README.md**)
 
 ## Typing
 
@@ -39,19 +46,19 @@ do further examination with information provided in these fields updated by
 previous visitors. If some error occurs, `v` throws an error message, 
 otherwise, it updates the global variables in its turn.
 
-The method `Typ.equals(Typ)` was added in order to simplify syntax 
-for type verification.
+The method `Typ.equals(Typ)` was added in order to simplify syntax for type 
+verification.
 
 By the way, we also encountered some difficulties while working with variables
-inside different layers of blocs. Instead of only considering a dictionary 
+inside different layers of blocks. Instead of only considering a dictionary 
 containing all variables seen previously, we actually have to use a *stack* of 
 dictionaries which is, in the end, the only suitable data structure to deal 
 with nested code blocks. The reason is that if a variable has been defined 
 twice inside different layers, only the newest has to be considered, and 
-besides, while exiting a bloc, the newly defined local variables shouldn't be 
-available anymore outside this bloc. We use a stack of dictionary so that we 
+besides, while exiting a block, the newly defined local variables shouldn't be 
+available anymore outside this block. We use a stack of dictionaries so that we 
 can look through all layers to find a variable and delete the latest variable 
-dictionary while exiting the bloc.
+dictionary while exiting the block.
 
 
 ## Construction of RTLtree
@@ -96,7 +103,7 @@ in the following steps.
 
 We also had difficulties translating access/assignment of local variables and 
 structure fields, because it was not evident to compute the offset of the field
-related to the register storing the pointer to the structure. 
+related to the register which stores the pointer to the structure. 
 A convenient way was to decorate `Field` with its offset and `Structure` with 
 its size in their definition, and compute them at the same time as we examine
 the typing errors (cf.`Typing`). Finally the problem was solved easily. Same
@@ -142,9 +149,9 @@ created in the reverse order.
 
 We also encountered another difficulty when translating the instruction
 `Rgoto`. While testing with Mini-C programs that contain a *while* loop, we 
-forgot not to visit a same label twice or more, so the visitor got stuck in an
-infinite loop. We solved this problem by using a table called `visitedLabels` 
-that records every visited Labels.
+forgot not to visit the same labels twice or more, so the visitor got stuck in 
+an infinite loop. We solved this problem by using a table called `visitedLabels` 
+that records every visited label.
 
 
 ## ERTLtree to LTLtree
@@ -159,16 +166,16 @@ from `ERTL` to `LTL` is going to act on the first point: find an explicit
 register for every pseudo-register left in the graph, i.e. perform 
 *register allocation*.
 
-The register allocation is divided in three steps : 
+The register allocation is divided in three steps:
 
 - determine the *liveness* of registers along the control graph, that is, find 
     which registers are alive, dead, used or produced when the control flows 
  	through an instruction block.
 
-- determine the *interference* and *preference* relations between pseudo-registers, 
-	that is, determine when a value can be carried by the same physical register 
-	(whether real or on the stack). These relations are built upon the previous 
-	liveness analysis.
+- determine the *interference* and *preference* relations between 
+    pseudo-registers, that is, determine when a value can be carried by the 
+    same physical register (whether real or on the stack). These relations are 
+    built upon the previous liveness analysis.
  	
 - perform the *coloring* of the register graph, that is, give every register 
  	(physical or abstract) a color (a corresponding physical register) such 
@@ -189,11 +196,11 @@ spilled registers make the instruction require too many simultaneous access to
 memory, so we have to use a temporary register (or two for `ERstore`).
 
 In the `ERmbinop` case:
-- If we have a `mov x x` instruction, simplify it into a `goto` instruction
-- If we have a division with arguments `x` and `y`, make sure the second, `y`,
- 	is not on the stack, otherwise use a temporary register
+- If we have a `mov x x` instruction, simplify it into a `goto` instruction.
+- If we have a division with arguments `x` and `y`, make sure the latter (`y`)
+ 	is not on the stack, otherwise use a temporary register.
 - Otherwise the `ERmbinop` is treated like the previous ones with a special 
-    case when the two arguments are on the stack and a temporary register has 
+    case when the two arguments are on the stack, then a temporary register has 
     to be used.
 
 
@@ -202,10 +209,10 @@ In the `ERmbinop` case:
 ### Overview
 
 Now that every pseudo-register has been transformed into physical registers or 
-stack memory, the remaining work is to make the control flow linear, and transform 
-every LTL code into real assembly instructions. The work is done in the file 
-`ToX86_64.java` which implements a `LTLVisitor` defined in `LTL.java`, visiting 
-the previously constructed `LTLGraph`.
+stack memory, the remaining work is to linearize the control flow, and 
+transform every LTL code into real assembly instructions. The work is done in 
+the class `ToX86_64` which implements a `LTLVisitor` defined in `LTL.java`, 
+visiting the previously constructed `LTLGraph`.
 
 ### Implementation and difficulties
 
@@ -242,7 +249,7 @@ have already been visited, we have no choice but to produce a `jmp` instruction
 for the negative label.
 
 Secondly, at the beginning we forgot to mark some of the labels as needed, so 
-they didn't appear in the final assembly code : this led to errors for 
+they didn't appear in the final assembly code: this led to errors for 
 undefined references during the interpretation. We finally came out with the 
 conclusion of two sufficient and necessary conditions for a label to be 
 needed, which give the two sets:
@@ -262,7 +269,7 @@ Finally, as for the multiplication, the destination must be a register instead
 of "spilled" memory address, so we make use of a temporary register to do the 
 transfer. As for the division, `cqto` must be used to convert *quad* to *oct* 
 for the divisor since `idiv` does a 128/64 bit division. Only the first 
-register needs to be used because it is imposed that `%rax` is used to store 
+register needs to be used because it is imposed that `%rax` be used to store 
 the dividend (before `idiv`) and the result (after `idiv`).
 
 
@@ -286,7 +293,7 @@ exit label, and the name of the function has to be itself. Besides, we should
 not directly `goto` the entry label. Instead, we should `goto` the label where 
 the arguments are passed into registers or stack memories, since we
 should never reallocate the frame. However these labels haven't been computed 
-during the recursion, so we apply the same method: create new `goto` labels, 
-store them and associate them to the good labels afterwards.
+during the recursion, so we apply the same clever method: create new `goto` 
+labels, store them and associate them to the good labels afterwards.
 
 The optimization works pretty well, with all the tests passed.
